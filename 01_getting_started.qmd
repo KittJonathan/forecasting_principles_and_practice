@@ -1,0 +1,109 @@
+---
+title: "1. Getting started"
+format: html
+editor: visual
+execute: 
+  echo: true
+  eval: true
+---
+
+<https://otexts.com/fpp3/what-can-be-forecast.html>
+
+# 1.1 What can be forecast?
+
+Which is easiest to forecast? (examples from easiest to hardest)
+
+1.  Time of sunrise this day next year
+2.  Timing of next Halley's comet appearance
+3.  Maximum temperature tomorrow
+4.  Daily electricity demand in 3 days time
+5.  Total sales of drugs in Australian pharmacies next month
+6.  Google stock prices tomorrow
+7.  Exchange rate of \$US/AUS next week
+8.  Google stock price in 6 months time
+
+Something is easier to forecast if:
+
+1.  We have a good understanding of the factors that contribute to it
+2.  There is lots of data available
+3.  The future is somewhat similar to the past
+4.  The forecasts cannot affect the thing we are trying to forecast
+
+# 1.2 Forecasting, goals and planning
+
+**Forecasting**: predicting the future as accurately as possible, given all of the information available, including historical data and knowledge of any future events that might impact the forecasts.
+
+**Goals**: are what you would like to have happen. Goals should be linked to forecasts and plans, but this does not always occur. Too often, goals are set without any plan for how to achieve them, and no forecasts for whether they are realistic.
+
+**Planning**: is a response to forecasts and goals. Planning involves determining the appropriate actions that are required to make your forecasts match your goals.
+
+# 1.3 Determing what to forecast
+
+-   What are forecasts needed for?
+
+-   What is the forecasting horizon?
+
+-   How frequently are forecasts required?
+
+-   How will the forecasts be used?
+
+Once it has been determined what forecasts are required, it is then necessary to find or collect the data on which the forecasts will be based.
+
+# 1.4 Forecasting data and methods
+
+If there are no data available, or if the data available are not relevant to the forecasts, then **qualitative forecasting** methods must be used.
+
+**Quantitative forecasting** can be applied when two conditions are satisfied:
+
+1.  numerical information about the past is available
+2.  it is reasonable to assume that some aspects of the past patterns will continue into the future
+
+Anything that is observed sequentially over time is a **time series**.
+
+**Decomposition methods** are helpful for studying the trend and seasonal patterns in a time series.
+
+Popular time series models used for forecasting include **exponential smoothing models** and **ARIMA** models.
+
+**Predictor variables and time series forecasting**
+
+We wish to forecast the hourly electricity demand (ED).
+
+-   Model with predictor variables:
+
+    $$ED = f(current\ temperature, strength\ of\ economy, population, time\ of\ day, day\ of\ week, error)$$
+
+-   Time series model:
+
+    $$
+    ED_{t+1}=f(ED_t,ED_{t-1},ED_{t-2}, ED_{t-3}, error)
+    $$
+
+-   Mixed model, known as dynamic regression models, panel data models, longitudinal models, transfer function models, linear system models:
+
+    $$
+    ED_{t+1}=f(ED_t,current\ temperature,time\ of\ day,day\ of\ week, error)
+    $$
+
+# 1.5 Some case studies
+
+-   Case 1: paperware company
+
+-   Case 2: drug sales on the Pharmaceutical Benefits Scheme
+
+-   Case 3: car fleet company
+
+-   Case 4: airline company
+
+# 1.6 The basic steps in a forecasting task
+
+1.  Step 1: Problem definition
+2.  Step 2: Gathering information
+3.  Step 3: Preliminary (exploratory) analysis
+4.  Step 4: Choosing and fitting models
+5.  Step 5: Using and evaluating a forecasting model
+
+# 1.7 The statistical forecasting perspective
+
+The thing we are trying to forecast is unknown and so we can think of it as a random variable.
+
+A forecast is an estimate of the probabilities of possible futures.

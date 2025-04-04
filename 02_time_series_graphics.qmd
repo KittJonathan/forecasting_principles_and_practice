@@ -1,0 +1,195 @@
+---
+title: "2. Time series graphics"
+format: html
+editor: visual
+execute: 
+  echo: true
+  eval: true
+---
+
+<https://otexts.com/fpp3/graphics.html>
+
+# 2.1 `tsibble` objects
+
+```{r}
+library(fpp3)
+```
+
+```{r}
+global_economy
+```
+
+```{r}
+tourism
+```
+
+A `tsibble` contains:
+
+-   an index: time observation about the observation
+
+-   measured variable(s): numbers of interest
+
+-   key variable(s): optional unique identifiers for each series
+
+To create a `tsibble`:
+
+```{r}
+mydata <- tsibble(
+  year = 2015:2019,
+  y = c(123, 39, 78, 52, 110),
+  index = year
+)
+mydata
+```
+
+Transform an object into a `tsibble`:
+
+```{r}
+mydata <- tibble(
+  year = 2015:2019,
+  y = c(123, 39, 78, 52, 110)
+) |> 
+  as_tsibble(index = year)
+mydata
+```
+
+For observations more frequent than once per year, we need to use a time class function on the index.
+
+```{r}
+z <- tibble(
+  Month = c("2019 Jan", "2019 Feb", "2019 Mar", "2019 Apr"),
+  Observation = c(50, 23, 34, 30)
+)
+z
+```
+
+```{r}
+z |> 
+  mutate(Month = yearmonth(Month)) |> 
+  as_tsibble(index = Month)
+```
+
+Common time index variables can be created with these functions:
+
+| Frequency | Function                     |
+|-----------|------------------------------|
+| Annual    | `start:end`                  |
+| Quarterly | `yearquarter()`              |
+| Monthly   | `yearmonth()`                |
+| Weekly    | `yearweek()`                 |
+| Daily     | `as_date()`, `ymd()`         |
+| Sub-daily | `as_datetime()`, `ymd_hms()` |
+
+```{r}
+prison <- readr::read_csv(
+  "https://OTexts.com/fpp3/extrafiles/prison_population.csv")
+```
+
+```{r}
+prison
+```
+
+```{r}
+prison |> 
+  mutate(Quarter = yearquarter(Date)) |> 
+  select(-Date) |> 
+  as_tsibble(
+    index = Quarter,
+    key = c(State, Gender, Legal, Indigenous)
+  )
+```
+
+```{r}
+olympic_running
+```
+
+```{r}
+olympic_running |> 
+  distinct(Sex)
+```
+
+```{r}
+PBS
+```
+
+```{r}
+a10 <- PBS |> 
+  filter(ATC2 == "A10") |> 
+  select(Month, Concession, Type, Cost) |> 
+  summarise(TotalC = sum(Cost)) |> 
+  mutate(Cost = TotalC / 1e6)
+a10
+```
+
+The seasonal period:
+
+| Data     | Minute | Hour | Day   | Week   | Year     |
+|----------|--------|------|-------|--------|----------|
+| Quarters |        |      |       |        | 4        |
+| Months   |        |      |       |        | 12       |
+| Weeks    |        |      |       |        | 52       |
+| Days     |        |      |       | 7      | 365.25   |
+| Hours    |        |      | 24    | 168    | 8766     |
+| Minutes  |        | 60   | 1440  | 10080  | 525960   |
+| Seconds  | 60     | 3600 | 86400 | 604800 | 31557600 |
+
+# 2.2 Time plots
+
+```{r}
+a10 |> 
+  autoplot(Cost) |> 
+  labs(y = "$ (millions)",
+       title = "Australian antidiabetic drug saled")
+```
+
+```{r}
+a10 |> 
+  ggplot(aes(x = Month, y = Cost)) +
+  geom_point()
+```
+
+```{r}
+a10 |> 
+  ggplot(aes(x = Month, y = Cost)) +
+  geom_line()
+```
+
+```{r}
+a10 |> 
+  autoplot(Cost) +
+  geom_point()
+```
+
+```{r}
+a10 |> 
+  autoplot(Cost) +
+  labs(title = "Antidiabetic drug sales",
+       y = "$ million")
+```
+
+```{r}
+ansett |> 
+  autoplot(Passengers)
+```
+
+```{r}
+ansett |> distinct(Class)
+```
+
+```{r}
+ansett |> distinct(Airports)
+```
+
+```{r}
+ansett |> 
+  filter(Class == "Economy", Airports == "MEL-SYD") |> 
+  mutate(Passengers = Passengers / 1000) |> 
+  autoplot(Passengers) +
+  labs(title = "Ansett airlines economy class",
+       subtitle = "Melbourne-Sydney",
+       y = "Passengers ('000)")
+```
+
+# 2.3 Time series patterns
+
+<https://otexts.com/fpp3/tspatterns.html>
