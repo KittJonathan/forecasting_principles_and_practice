@@ -193,3 +193,255 @@ ansett |>
 # 2.3 Time series patterns
 
 <https://otexts.com/fpp3/tspatterns.html>
+
+**Trend**: pattern exists when there is a long-term increase or decrease in the data.
+
+**Seasonal**: pattern exists when a series is influenced by seasonal factors (e.g. the quarter of the year, the month, or day of the week).
+
+**Cyclic**: pattern exists when data exhibit rises and falls that are *not of fixed period* (duration usually of at least 2 years).
+
+Differences between seasonal and cyclic patterns:
+
+-   seasonal pattern constant length; cyclic pattern variable length
+
+-   average length of cycle longer than length of seasonal pattern
+
+-   magnitude of cycle more variable than magnitude of seasonal pattern
+
+```{r}
+aus_production |> 
+  filter(year(Quarter) >= 1980) |> 
+  autoplot(Electricity) +
+  labs(y = "GWh", title = "Australian electricity production")
+```
+
+```{r}
+aus_production |> 
+  autoplot(Bricks) +
+  labs(y = "million units", title = "Australian clay brick production")
+```
+
+```{r}
+us_employment |> 
+  filter(Title == "Retail Trade", year(Month) >= 1980) |> 
+  autoplot(Employed / 1e3) +
+  labs(y = "Million people", title = "Retail employment, USA")
+```
+
+```{r}
+gafa_stock |> 
+  filter(Symbol == "AMZN", year(Date) >= 2018) |> 
+  autoplot(Close) +
+  labs(y = "$US", title = "Amazon closing stock price")
+```
+
+```{r}
+pelt |> 
+  autoplot(Lynx) +
+  labs(y = "Number trapped", title = "Annual Canadian Lynx Trappings")
+```
+
+> The timing of peaks and troughs is predictable with seasonal data, but unpredictable in the long term with cyclic data.
+
+# 2.4 Seasonal plots
+
+```{r}
+a10 |> 
+  autoplot(Cost)
+```
+
+```{r}
+a10 |> 
+  gg_season(Cost, labels = "both") + 
+  labs(y = "$ million", title = "Seasonal plot: antidiabetic drug sales")
+```
+
+Seasonal plot:
+
+-   Data plotted against the individual "seasons" in which the data were observed (in this case a "season" is a month)
+
+-   Something like a time plot except that the data from each season are overlapped
+
+-   Enables the underlying seasonal pattern to be seen more clearly, and also allows any substantial departures from the seasonal pattern to be easily identified
+
+-   In R: `gg_season()`
+
+```{r}
+beer <- aus_production |> 
+  select(Quarter, Beer) |> 
+  filter(year(Quarter) >= 1992)
+```
+
+```{r}
+beer |> 
+  autoplot(Beer) +
+  labs(title = "Australian beer production", y = "Megalitres")
+```
+
+```{r}
+beer |> 
+  autoplot(Beer) +
+  geom_point() +
+  labs(title = "Australian beer production", y = "Megalitres")
+```
+
+```{r}
+beer |> 
+  gg_season(Beer, labels = "right")
+```
+
+```{r}
+# Victoria electricity data (observed every 30min)
+vic_elec
+```
+
+```{r}
+vic_elec |> 
+  autoplot()
+```
+
+```{r}
+vic_elec |> 
+  gg_season(Demand)
+```
+
+```{r}
+vic_elec |> 
+  gg_season(Demand, period = "week")
+```
+
+```{r}
+vic_elec |> 
+  gg_season(Demand, period = "day")
+```
+
+# 2.5 Seasonal subseries plots
+
+```{r}
+a10 |> 
+  autoplot(Cost) +
+  labs(y = "$ (millions)", title = "Australian antidiabetic drug sales")
+```
+
+```{r}
+a10 |> 
+  gg_subseries(Cost) +
+  labs(y = "$ million", title = "Subseries plot: antidiabetic drug sales")
+```
+
+-   Data for each season collected together in time plot as separate time series
+
+-   Enables the underlying seasonal pattern to be seen clearly, and changes in seasonality over time to be visualized
+
+-   In R: `gg_subseries()`
+
+```{r}
+beer |> 
+  autoplot(Beer)
+```
+
+```{r}
+beer |> 
+  gg_subseries(Beer)
+```
+
+```{r}
+holidays <- tourism |> 
+  filter(Purpose == "Holiday") |> 
+  group_by(State) |> 
+  summarise(Trips = sum(Trips))
+holidays
+```
+
+```{r}
+holidays |> 
+  autoplot(Trips) +
+  labs(y = "thousands of trips",
+       title = "Australian domestic holiday nights")
+```
+
+```{r}
+holidays |> 
+  gg_season(Trips) +
+  facet_wrap(vars(State), nrow = 2, scales = "free_y") +
+  labs(y = "Thousands od trips",
+       title = "Australian domestic holiday nights")
+```
+
+```{r}
+holidays |> 
+  gg_subseries(Trips) +
+  labs(y = "Thousands of trips",
+       title = "Australian domestic holiday nights")
+```
+
+# 2.6 Scatterplots
+
+```{r}
+vic_elec_day_type <- vic_elec |> 
+  filter(year(Time) == 2014) |> 
+  mutate(
+    Day_Type = case_when(
+      Holiday ~ "Holiday",
+      wday(Date) %in% 2:6 ~ "Weekday",
+      TRUE ~ "Weekend"))
+vic_elec_day_type
+```
+
+```{r}
+vic_elec_day_type |> 
+  autoplot(Demand) +
+  labs(y = "GW")
+```
+
+```{r}
+vic_elec_day_type |> 
+  autoplot(Temperature) +
+  labs(y = "Degrees Celsius")
+```
+
+```{r}
+vic_elec_day_type |> 
+  ggplot(aes(x = Temperature, y = Demand)) +
+  geom_point() +
+  labs(x = "Temperature (degrees Celsius",
+       y = "Electricity demand (GW)")
+```
+
+```{r}
+vic_elec_day_type |> 
+  ggplot(aes(x = Temperature, y = Demand, colour = Day_Type)) +
+  geom_point() +
+  labs(x = "Temperature (degrees Celsius",
+       y = "Electricity demand (GW)")
+```
+
+```{r}
+vic_elec |> 
+  filter(year(Time) == 2014) |> 
+  autoplot(Temperature) +
+  labs(
+    y = "Degrees Celsius",
+    title = "Half-hourly temperatures: Melbourne, Australia"
+  )
+```
+
+The correlation coefficient measures the extent of a linear relationship between two variables (lies between -1 and 1).
+
+```{r}
+us_change |> 
+  GGally::ggpairs(columns = 2:6)
+```
+
+```{r}
+tourism |> 
+  group_by(State) |> 
+  summarise(Trips = sum(Trips)) |> 
+  ggplot(aes(x = Quarter, y = Trips)) +
+  geom_line() +
+  facet_grid(vars(State), scales = "free_y") +
+  labs(title = "Australian domestic tourism",
+       y = "Overnight trips ('000)")
+```
+
+# 2.7 Lag plots
