@@ -445,3 +445,191 @@ tourism |>
 ```
 
 # 2.7 Lag plots
+
+```{r}
+new_production <- aus_production |> 
+  filter(year(Quarter) >= 1992)
+new_production
+```
+
+```{r}
+new_production |> 
+  gg_lag(Beer, geom = "point")
+```
+
+Each plot shows $y_t$ plotted against $y_{t-k}$ for different values of $k$.
+
+e.g. plot in the upper-left part : yellow points show beer production for Q4 on the y-axis against Q3 of the same year on the x-axis.
+
+```{r}
+new_production |> 
+  gg_lag(Beer)
+```
+
+# 2.8 Autocorrelation
+
+```{r}
+new_production |> 
+  gg_lag(Beer, geom = "point")
+```
+
+-   Each graph shows $y_t$ plotted against $y_{t-k}$ for different values of $k$.
+
+-   The autocorrelations are the correlations associated with these scatterplots.
+
+-    $r_1 =$ Correlation $(y_t,t_{t-1})$
+
+-    $r_2 =$ Correlation $(y_t,t_{t-2})$
+
+-    $r_3 =$ Correlation $(y_t,t_{t-3})$
+
+Sample autocovariance at lag $k$:
+
+$$
+c_k=\frac{1}{T}\sum_{t=k+1}^{T}(y_t-\bar{y})(y_{t-k}-\bar{y})
+$$
+
+and $r_k=c_k/c_0$
+
+Where $T$ is the length of the time series.
+
+-   $r_1$ indicates how succesive values oy $y$ relate to each other
+
+-   $r_2$ indicates how $y$ values two periods apart relate to each other
+
+-   $r_k$ is almost the same as the sample correlation between $y_t$ and $y_{t-k}$
+
+Results for first 9 lags for beer data:
+
+```{r}
+new_production |> 
+  ACF(Beer, lag_max = 9)
+```
+
+Correlogram:
+
+```{r}
+new_production |> 
+  ACF(Beer, lag_max = 9) |> 
+  autoplot()
+```
+
+```{r}
+new_production |> 
+  ACF(Beer) |> 
+  autoplot()
+```
+
+-   When data have a trend, the autocorrelations for small lags tend to be large and positive
+
+-   When data are seasonal, the autocorrelations will be larger at the seasonal lags (i.e., at multiples of the seasonal frequency)
+
+-   When data are trended and seasonal, you see a combination of these effects.
+
+```{r}
+retail <- us_employment |> 
+  filter(Title == "Retail Trade", year(Month) >= 1980)
+```
+
+```{r}
+retail |> 
+  autoplot(Employed)
+```
+
+```{r}
+retail |> 
+  ACF(Employed, lag_max = 48) |> 
+  autoplot()
+```
+
+-   trend: strongly correlated
+
+-   seasonal: slight peak at multiples of 12 (yearly retail employment peaks)
+
+Google stock price
+
+```{r}
+google_2015 <- gafa_stock |> 
+  filter(Symbol == "GOOG", year(Date) == 2015) |> 
+  select(Date, Close)
+```
+
+```{r}
+google_2015
+```
+
+```{r}
+google_2015 |> 
+  autoplot(Close)
+```
+
+```{r}
+google_2015 |> 
+  ACF(Close, lag_max = 100)
+```
+
+```{r}
+google_2015 |> 
+  ACF(Close, lag_max = 100) |> 
+  autoplot()
+```
+
+# 2.9 White noise
+
+Time series that show no autocorrelation are called white noise.
+
+```{r}
+set.seed(30)
+wn <- tsibble(t = 1:50,
+              y = rnorm(50),
+              index = t)
+wn |> autoplot(y)
+```
+
+White noise data is uncorrelated across time with zero mean and constant variance.
+
+```{r}
+wn |> 
+  ACF(y)
+```
+
+```{r}
+wn |> 
+  ACF(y) |> 
+  autoplot()
+```
+
+-   Sample autocorrelations for white noise series
+
+-   Expect each autocorrelation to be close to zero
+
+-   Blue lines show 95% critical values
+
+Sampling distribution of $r_k$ for white noise is asymptotically normal with mean 0 and variance 1/T : $N(0, 1/T)$.
+
+-   95% of all $r_k$ for white noise must lie within $\pm1.96/\sqrt{T}$.
+
+-   if this is not the case, the series is probably not white noise
+
+-   common to plot lines at $\pm1.96/\sqrt{T}$ when plotting ACF (these lines are the critical values)
+
+```{r}
+pigs <- aus_livestock |> 
+  filter(State == "Victoria", Animal == "Pigs", year(Month) >= 2014)
+```
+
+```{r}
+pigs |> 
+  autoplot(Count / 1e3) +
+  labs(y = "Thousands", title = "Number of pigs slaughtered in Victoria")
+```
+
+```{r}
+pigs |> 
+  ACF(Count) |> 
+  autoplot()
+```
+
+# 2.10 Exercises
+
+<https://otexts.com/fpp3/graphics-exercises.html>
