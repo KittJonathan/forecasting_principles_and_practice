@@ -1,0 +1,8 @@
+---
+title: "3. Time series decomposition"
+format: html
+editor: visual
+execute: 
+  echo: true
+  eval: true
+---

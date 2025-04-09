@@ -477,11 +477,11 @@ new_production |>
 
 -   The autocorrelations are the correlations associated with these scatterplots.
 
--    $r_1 =$ Correlation $(y_t,t_{t-1})$
+-   $r_1 =$ Correlation $(y_t,t_{t-1})$
 
--    $r_2 =$ Correlation $(y_t,t_{t-2})$
+-   $r_2 =$ Correlation $(y_t,t_{t-2})$
 
--    $r_3 =$ Correlation $(y_t,t_{t-3})$
+-   $r_3 =$ Correlation $(y_t,t_{t-3})$
 
 Sample autocovariance at lag $k$:
 
@@ -633,3 +633,143 @@ pigs |>
 # 2.10 Exercises
 
 <https://otexts.com/fpp3/graphics-exercises.html>
+
+## Exercise 1
+
+```{r}
+?aus_production
+```
+
+Bricks: clay brick production in millions of bricks.
+
+```{r}
+?pelt
+```
+
+Lynx: the number of Canadian Lynx pelts traded.
+
+```{r}
+?gafa_stock
+```
+
+Close: The closing price for the stock.
+
+```{r}
+?vic_elec
+```
+
+Demand: Total electricity demand in MWh.
+
+```{r}
+head(aus_production, 2)
+```
+
+```{r}
+head(pelt, 2)
+```
+
+```{r}
+head(gafa_stock, 2)
+```
+
+```{r}
+head(vic_elec, 2)
+```
+
+aus_production -\> Quarter
+
+pelt -\> Year
+
+gafa_stock -\> Undefined
+
+vic_elec -\> 30 minutes
+
+```{r}
+aus_production |> autoplot(Bricks)
+```
+
+```{r}
+pelt |> autoplot(Lynx)
+```
+
+```{r}
+gafa_stock |> autoplot(Close)
+```
+
+```{r}
+vic_elec |> 
+  autoplot(Demand) +
+  labs(title = "Total electricity demand",
+       x = "Time (30 minutes)",
+       y = "Demand 'MWh")
+```
+
+## Exercise 2
+
+```{r}
+gafa_stock |> 
+  slice_max(order_by = Close, n = 1, by = Symbol)
+```
+
+## Exercise 3
+
+```{r}
+tute1 <- readr::read_csv("tute1.csv")
+```
+
+```{r}
+head(tute1)
+```
+
+Convert the data to time series
+
+```{r}
+mytimeseries <- tute1 |> 
+  mutate(Quarter = yearquarter(Quarter)) |> 
+  as_tsibble(index = Quarter)
+```
+
+Construct time series plots of each of the three series
+
+```{r}
+mytimeseries |> 
+  pivot_longer(cols = -Quarter) |> 
+  ggplot(aes(x = Quarter, y = value, colour = name)) +
+  geom_line() +
+  facet_grid(name ~ ., scales = "free_y")
+```
+
+```{r}
+mytimeseries |> 
+  pivot_longer(cols = -Quarter) |> 
+  ggplot(aes(x = Quarter, y = value, colour = name)) +
+  geom_line()
+```
+
+## Exercise 4
+
+```{r}
+^#install.packages("USgas")
+```
+
+```{r}
+library(USgas)
+```
+
+```{r}
+us_total_ts <- us_total |> 
+  as_tsibble(key = state, index = year)
+```
+
+```{r}
+us_total_ts |> 
+  filter(state %in% c("Maine", "Vermont", "New Hampshire",
+                      "Massachusetts", "Connecticut", "Rhode Island")) |> 
+  autoplot(y)
+```
+
+## Exercise 5
+
+```{r}
+tourism <- readxl::read_excel("tourism.xlsx")
+```
