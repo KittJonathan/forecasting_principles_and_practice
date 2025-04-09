@@ -6,3 +6,29 @@ execute:
   echo: true
   eval: true
 ---
+
+We can think of a time series as comprising three components:
+
+-   a trend-cycle component
+
+-   a seasonal component
+
+-   a remainder component (containing anything else in the time series)
+
+# 3.1 Transformations and adjustments
+
+Per capita adjustments
+
+```{r}
+global_economy |> 
+  filter(Country == "Australia") |> 
+  autoplot(GDP)
+```
+
+```{r}
+global_economy |> 
+  filter(Country == "Australia") |> 
+  autoplot(GDP / Population)
+```
+
+#  
