@@ -31,4 +31,102 @@ global_economy |>
   autoplot(GDP / Population)
 ```
 
-#  
+```{r}
+print_retail <- aus_retail |> 
+  filter(Industry == "Newspaper and book retailing") |> 
+  group_by(Industry) |> 
+  index_by(Year = year(Month)) |> 
+  summarise(Turnover = sum(Turnover))
+```
+
+```{r}
+aus_economy <- global_economy |> 
+  filter(Code == "AUS")
+```
+
+```{r}
+print_retail |> 
+  left_join(aus_economy) |> 
+  mutate(Adjusted_turnover = Turnover / CPI * 100) |> 
+  pivot_longer(c(Turnover, Adjusted_turnover),
+               values_to = "Turnover") |> 
+  mutate(name = factor(name, 
+                       levels = c("Turnover", "Adjusted_turnover"))) |> 
+  ggplot(aes(x = Year, y = Turnover)) +
+  geom_line() +
+  facet_grid(name ~ ., scales = "free_y") +
+  labs(title = "Turnover: Australian print media history",
+       y = "$AU")
+  
+```
+
+Mathematical transformations: if the data show different variation at different levels of the series, then a transformation can be useful.
+
+Denote original observations as $y_1$, ..., $y_T$ and transformed observations as $w_1$, ... $w_T$.
+
+e.g. square root, cube root, logarithm
+
+```{r}
+food <- aus_retail |> 
+  filter(Industry == "Food retailing") |> 
+  summarise(Turnover = sum(Turnover))
+```
+
+```{r}
+food |> 
+  autoplot(Turnover) +
+  labs(y = "Turnover ($AUD)")
+```
+
+```{r}
+food |> 
+  autoplot(sqrt(Turnover)) +
+  labs(y = "Square root turnover")
+```
+
+```{r}
+food |> 
+  autoplot(log(Turnover)) +
+  labs(y = "Log turnover")
+```
+
+```{r}
+food |> 
+  autoplot(-1 / Turnover) +
+  labs(y = "Inverse turnover")
+```
+
+Box-Cox transformations
+
+```{r}
+food |> 
+  features(Turnover, features = guerrero)
+```
+
+-   This attempts to balance the seasonal fluctuations and random variation across the series
+
+-   Always check the results
+
+-   A low value of $\lambda$ can give extremely large prediction intervals
+
+```{r}
+food |> 
+  autoplot(box_cox(Turnover, 0.0524)) +
+  labs(y = "Box-Cox transformed turnover")
+```
+
+-   Often no transformation needed
+
+-   Simple transformations are easier to explain and work well enough
+
+-   Transformations can have very large effect on Prediction Intervals (PI)
+
+-   If some data are zero or negative, then use $\lambda$ \> 0
+
+-   `log1p()` can also be useful for data with zeros
+
+-   Choosing logs is a simple way to force forecasts to be positive
+
+-   Transformations must be reversed to obtain forecasts on the original scale (handled automatically by `fable`)
+
+# 3.2 Time series components
