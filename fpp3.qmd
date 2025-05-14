@@ -1,0 +1,308 @@
+---
+title: "Forecasting Principles and Practice"
+format: html
+editor: visual
+---
+
+# Chapter 1 - Getting started
+
+<https://otexts.com/fpp3/intro.html>
+
+## 1.1 What can be forecast?
+
+<https://otexts.com/fpp3/what-can-be-forecast.html>
+
+Which is easiest to forecast (from easiest at the top to hardest at the bottom):
+
+1.  time of sunrise this day next year
+2.  timing of next Halley's comet appearance
+3.  maximum temperature tomorrow
+4.  daily electricity demand in 3 days time
+5.  total sales of drugs in Australian pharmacies next month
+6.  Google stock price tomorrow
+7.  exchange rate of \$US/AUS next week
+8.  Google stock price in 6 months time
+
+Something is easier to forecast if:
+
+1.  we have a good understanding of the factors that contribute to it
+2.  there is lots of data available
+3.  the future is somewhat similar to the past
+4.  the forecasts cannot affect the thing we are trying to forecast
+
+## 1.2 Forecasting, goals and planning
+
+<https://otexts.com/fpp3/planning.html>
+
+**Forecasting** is about predicting the future as accurately as possible, given all of the information available, including historical data and knowledge of any future events that might impact the forecasts.
+
+**Goals** are what you would like to happen. Goals should be linked to forecasts and plans, but this does not always occur. Too often, goals are set without any plan for how to achieve them, and no forecasts for whether they are realistic.
+
+**Planning** is a response to forecasts and goals. Planning involves determining the appropriate actions that are required to make your forecasts match your goals.
+
+**Short-term forecasts** are needed for the scheduling of personnel, production and transportation. As part of the scheduling process, forecasts of demand are often also required.
+
+**Medium-term forecasts** are needed to determine future resource requirements, in order to purchase raw materials, hire personnel, or buy machinery and equipment.
+
+**Long-term forecasts** are used in strategic planning. Such decisions must take account of market opportunities, environmental factors and internal resources.
+
+## 1.3 Determining what to forecast
+
+<https://otexts.com/fpp3/determining-what-to-forecast.html>
+
+-   What should be forecast?
+
+-   Consider the forecasting horizon
+
+-   How frequently are forecasts required?
+
+## 1.4 Forecasting data and methods
+
+<https://otexts.com/fpp3/data-methods.html>
+
+If there are no data available, or if the available data are not relevant to the forecasts, then **qualitative forecasting** must be used.
+
+**Quantitative forecasting** can be applied when two conditions are satisfied:
+
+1.  numerical information about the past is available
+2.  it is reasonable to assume that some aspects of the past patterns will continue into the future
+
+We wish to forecast the hourly electricity demand (ED) of a hot region during the summer period. A model with predictor variables might be of the form
+
+$$
+ED=f(current\ temp,strength\ of\ economy, population, time\ of\ day, day\ of\ week, error)
+$$
+
+The "error" term allows for random variation and the effects of relevant variables that are not included in the model.
+
+We could use a **time series model**, of the form
+
+$$
+ED_{t+1}=f(ED_t,ED_{t-1},ED_{t-2},ED_{t-3},...,error)
+$$
+
+A third type of model combines the features of the above two models:
+
+$$
+ED_{t+1}=f(ED_t,current\ temp,time\ of\ day,day\ of\ week,error)
+$$
+
+## 1.5 Some case studies
+
+<https://otexts.com/fpp3/case-studies.html>
+
+## 1.6 The basic steps in a forecasting task
+
+<https://otexts.com/fpp3/basic-steps.html>
+
+Step 1: Problem definition
+
+Step 2: Gathering information
+
+Step 3: Preliminary (exploratory) analysis
+
+Step 4: Choosing and fitting models
+
+Step 5: Using and evaluating a forecasting model
+
+## 1.7 The statistical forecasting perspective
+
+A forecast is an estimate of the probabilities of possible futures.
+
+Statistical forecasting:
+
+-   Thing to be forecast: a random variable, $y_t$
+
+-   Forecast distribution: if $I$ is all observations, then $y_{t|I}$ means "the random variable $y_t$ given what we know in $I$
+
+-   The "point forecast" is the mean (or median) of $y_t|I$
+
+-   The "forecast variance" is $var[y_t|I]$
+
+-   A prediction interval or "interval forecast" is a range of values of $y_t$ with high probability
+
+-   With time series, $y_{t|t-1}=y_t|\{y_1,y_2,...,y_{t-1}\}$
+
+-   $\hat{y}_{T+h|T}=E[y_{T+h}|y_1,...,y_T]$ (an h-step forecast taking account of all observations up to time $T$).
+
+# Chapter 2 - Time series graphics
+
+## 2.1 `tsibble` objects
+
+<https://otexts.com/fpp3/tsibbles.html>
+
+Load the `fpp3` package:
+
+```{r}
+library(fpp3)
+```
+
+Example of a `tsibble` object:
+
+```{r}
+global_economy
+```
+
+-   15,150 rows and 9 columns
+
+-   The data are 1 year apart: `[1Y]`
+
+-   There is a key variable, `country`, and 263 countries in the dataset
+
+    -   there are 263 separate time series
+
+    -   the key variable determines the different time series
+
+-   An index variable is the variable that indexes the time series (e.g. `year`)
+
+-   All the other variables are *measured variables*
+
+Another example of `tsibble` object:
+
+```{r}
+tourism
+```
+
+-   A `tsibble` allows storage and manipulation of multiple time series in R
+
+-   It contains:
+
+    -   An index: time information about the observation
+
+    -   Measured variable(s): numbers of interest
+
+    -   Key variable(s): optional unique identifiers for each series
+
+-   It works with `tidyverse` functions
+
+To create a `tsibble` object:
+
+```{r}
+mydata <- tsibble(
+  year = 2015:2019,
+  y = c(123, 39, 78, 52, 110),
+  index = year
+)
+
+mydata
+```
+
+Converting an existing data frame (or `tibble`) into a `tsibble`:
+
+```{r}
+mydata <- tibble(
+  year = 2015:2019,
+  y = c(123, 39, 78, 52, 110)
+  ) |> 
+  as_tsibble(index = year)
+
+mydata
+```
+
+For observations more frequent than once per year, we need to use a time class function on the index.
+
+```{r}
+z <- tibble(
+  Month = c("2019 Jan", "2019 Feb", "2019 Mar", "2019 Apr", "2019 May"),
+  Observation = c(50, 23, 34, 30, 25)
+)
+
+z
+```
+
+```{r}
+z |> 
+  mutate(Month = yearmonth(Month)) |> 
+  as_tsibble(index = Month)
+```
+
+Common time index variables can be created with these functions:
+
+| Frequency | Function             |
+|-----------|----------------------|
+| Quarterly | `yearquarter()`      |
+| Monthly   | `yearmonth()`        |
+| Weekly    | `yearweek()`         |
+| Daily     | `as_date()`, `ymd()` |
+| Sub-daily | `as_datetime()`      |
+
+**Australian prison population dataset**
+
+Read a csv file and convert to a tsibble
+
+```{r}
+prison <- readr::read_csv("data/prison_population.csv")
+```
+
+```{r}
+prison
+```
+
+The observations are in fact quarterly:
+
+```{r}
+prison |> 
+  distinct(date) |> 
+  mutate(month = month(date)) |> 
+  distinct(month)
+```
+
+```{r}
+prison |> 
+  mutate(Quarter = yearquarter(date)) |> 
+  select(-date) |> 
+  as_tsibble(
+    index = Quarter,
+    key = c(state, gender, legal, indigenous)
+  )
+```
+
+**Australian Pharmaceutical Benefits Scheme**
+
+```{r}
+PBS
+```
+
+```{r}
+PBS |> 
+  filter(ATC2 == "A10") |> 
+  select(Month, Concession, Type, Cost) |> 
+  summarise(TotalC = sum(Cost))
+```
+
+No need to group by month, since this in inherent to the index variable.
+
+```{r}
+a10 <- PBS |> 
+  filter(ATC2 == "A10") |> 
+  select(Month, Concession, Type, Cost) |> 
+  summarise(TotalC = sum(Cost)) |> 
+  mutate(Cost = TotalC / 1e6)
+```
+
+**Olympic running**
+
+```{r}
+olympic_running
+```
+
+```{r}
+olympic_running |> 
+  distinct(Sex)
+```
+
+**The seasonal period**
+
+| Data     | Minute | Hour | Day   | Week   | Year     |
+|----------|--------|------|-------|--------|----------|
+| Quarters |        |      |       |        | 4        |
+| Months   |        |      |       |        | 12       |
+| Weeks    |        |      |       |        | 52       |
+| Days     |        |      |       | 7      | 365.25   |
+| Hours    |        |      | 24    | 168    | 8766     |
+| Minutes  |        | 60   | 1440  | 10080  | 525960   |
+| Seconds  | 60     | 3600 | 86400 | 604800 | 31557600 |
+
+## 2.2 Time plots
+
+<https://otexts.com/fpp3/time-plots.html>
