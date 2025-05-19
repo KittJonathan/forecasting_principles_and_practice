@@ -684,3 +684,468 @@ visitors |>
 ```
 
 ## 2.7 Lag plots
+
+```{r}
+new_production <- aus_production |> 
+  filter(year(Quarter) >= 1992)
+new_production
+```
+
+```{r}
+new_production |> 
+  gg_lag(Beer, geom = "point")
+```
+
+Each graph shows $y_t$ plotted against $y_{t-k}$ for different values of $k$.
+
+```{r}
+new_production |> 
+  gg_lag(Beer)
+```
+
+## 2.8 Autocorrelation
+
+```{r}
+new_production |> 
+  gg_lag(Beer, geom = "point")
+```
+
+-   Each graph shows $y_t$ plotted against $y_{t-k}$ for different values of $k$.
+
+-   The autocorrelations are the correlations associated with these scatterplots.
+
+-   $r_1=corr(y_t,y_{t-1})$
+
+-   $r_2=corr(y_t,y_{t-2})$
+
+-   $r_3=corr(y_t,y_{t-3})$
+
+-   ...
+
+We denote the sample autocovariance at lag $k$ by $c_k$ and the sample autocorrelation at lag $k$ by $r_k$. Then define:
+
+$$
+c_k=\frac{1}{T}\sum^T_{t=k+1}(y_t-\bar{y})(y_{t-k}-\bar{y})
+$$
+
+and
+
+$$
+r_k=\frac{c_k}{c_0}
+$$
+
+or
+
+$$
+r_k=\frac{\sum^T_{t=k+1}(y_t-\bar{y})(y_{t-k}-\bar{y})}{\sum^T_{t=1}(y_t-\bar{y})^2}
+$$
+
+-   $r_1$ indicates how successive values of $y$ relate to each other
+
+-   $r_2$ indicates how $y$ values two periods apart relate to each other
+
+-   $r_k$ is almost the same as the samle correlation between $y$ and $y-k$
+
+```{r}
+new_production |> 
+  ACF(Beer, lag_max = 9)
+```
+
+```{r}
+new_production |> 
+  ACF(Beer, lag_max = 9) |> 
+  autoplot()
+```
+
+-   Together, the autocorrelations at lags 1, 2, ..., make up the *autocorrelation* or ACF.
+
+-   The plot is known as a **correlogram**
+
+```{r}
+new_production |> 
+  ACF(Beer) |> 
+  autoplot()
+```
+
+-   $r_4$ is higher than for the other lags due to **the seasonal pattern in the data**: peaks tend to be **4 quarters** apart and troughs tend to be **4 quarters** apart.
+
+-   $r_2$ is more negative than for the other lags because troughs tend to be 2 quarters behind peaks.
+
+-   When data have a trend, the autocorrelations for small lags tend to be large and positive (because observations nearby in time are also nearby in value)
+
+-   When data are seasonal, the autocorrelations will be larger at the seasonal lags (i.e. at multiples of the seasonal frequency)
+
+-   When data are trended and seasonal, you see a combination of these effects
+
+```{r}
+retail <- us_employment |> 
+  filter(Title == "Retail Trade", year(Month) >= 1980)
+retail |> autoplot(Employed)
+```
+
+Trend + seasonal
+
+```{r}
+retail |> 
+  ACF(Employed, lag_max = 48) |> 
+  autoplot()
+```
+
+```{r}
+google_2015 <- gafa_stock |> 
+  filter(Symbol == "GOOG", year(Date) == 2015) |> 
+  select(Date, Close)
+google_2015
+```
+
+```{r}
+google_2015 |> autoplot(Close)
+```
+
+```{r}
+google_2015 |> 
+  ACF(Close, lag_max = 100)
+```
+
+```{r}
+google_2015 |> 
+  ACF(Close, lag_max = 100) |> 
+  autoplot()
+```
+
+## 2.9 White noise
+
+White noise contains all the frequencies in the spectrum.
+
+```{r}
+set.seed(30)
+wn <- tsibble(t = 1:50, y = rnorm(50), index = t)
+wn |> autoplot()
+```
+
+White noise data is uncorrelated across time with zero mean and constant variance.
+
+(Technically, we require independence as well).
+
+```{r}
+wn |> ACF(y = ,lag_max = 10)
+```
+
+```{r}
+wn |> ACF(y) |> autoplot()
+```
+
+-   Sample autocorrelations for white noise series
+
+-   Expect each autocorrelation to be close to zero
+
+-   Blue lines show 95% critical values
+
+Sampling distribution of $r_k$ for white noise data is asymptotically $N(0,1/T)$
+
+-   95% of all $r_k$ for white noise must lie within $\pm1.96/\sqrt{T}$
+
+-   If this is not the case, the series is probably not white noise
+
+-   Common to plot lines at $\pm1.96/\sqrt{T}$ when plotting ACF. These are the **critical values**
+
+```{r}
+pigs <- aus_livestock |> 
+  filter(State == "Victoria", Animal == "Pigs", year(Month) >= 2014)
+
+pigs |> autoplot(Count / 1e3) +
+  labs(y = "Thousands", title = "Number of pigs slaughtered in Victoria")
+```
+
+```{r}
+pigs |> 
+  ACF(Count) |> 
+  autoplot()
+```
+
+-   Difficult to detect pattern in time plot
+
+-   ACF shows significant autocorrelation for lags 2 and 12
+
+-   Indicates some slight seasonality
+
+These show the series is not a white noise series.
+
+## 2.10 Exercises
+
+## 2.11 Further reading
+
+# Chapter 3 - Time series decomposition
+
+3 types of time series patterns: trend, seasonality and cycles.
+
+When we decompose a time series into components, we usually combine the trend and cycle into a single **trend-cycle** component (often just called the **trend** for simplicity). Thus we can think of a time series as comprising three components:
+
+-   a trend-cycle component
+
+-   a seasonal component
+
+-   a remainder component
+
+For some time series (e.g. those that are observed at least daily), there can be more than one seasonal component, corresponding to the different seasonal periods.
+
+## 3.1 Transformations and adjustments
+
+**Par capita adjustments**
+
+```{r}
+global_economy |> 
+  filter(Country == "Australia") |> 
+  autoplot(GDP)
+```
+
+```{r}
+global_economy |> 
+  filter(Country == "Australia") |> 
+  autoplot(GDP / Population)
+```
+
+**Inflation adjustments**
+
+```{r}
+print_retail <- aus_retail |> 
+  filter(Industry == "Newspaper and book retailing") |> 
+  group_by(Industry) |> 
+  index_by(Year =  year(Month)) |> 
+  summarise(Turnover = sum(Turnover))
+
+aus_economy <- global_economy |> 
+  filter(Code == "AUS")
+
+print_retail |> 
+  left_join(aus_economy, by = "Year") |> 
+  mutate(Adjusted_turnover = Turnover / CPI * 100) |> 
+  pivot_longer(c(Turnover, Adjusted_turnover),
+               values_to = "Turnover") |> 
+  mutate(name = factor(name, levels = c("Turnover", "Adjusted_turnover"))) |> 
+  ggplot(aes(x = Year, y = Turnover)) +
+  geom_line() +
+  facet_grid(name ~ ., scales = "free_y") +
+  labs(title = "Turnover: Australian print media industry", y = "$AU")
+```
+
+**Mathematical transformations**
+
+If the data show different variations at different levels of the series, then a transformation can be useful.
+
+Denote original observations as $y_1, ..., y_T$ and transformed observations as $w_1, ..., w_T$.
+
+|             |                     |            |
+|-------------|---------------------|------------|
+| Square root | $w_t=\sqrt{y_t}$    | ⬊          |
+| Cube root   | $w_t=\sqrt[3]{y_t}$ | increasing |
+| Logarithm   | $w_t=log(y_t)$      | strength   |
+
+Logarithms, in particular, are useful because they are more interpretable: changes in a log value are **relative (percent) changes on the original scale**.
+
+```{r}
+food <- aus_retail |> 
+  filter(Industry == "Food retailing") |> 
+  summarise(Turnover = sum(Turnover))
+```
+
+```{r}
+food |> 
+  autoplot(Turnover) +
+  labs(y = "Turnover ($AUD)")
+```
+
+```{r}
+food |> 
+  autoplot(sqrt(Turnover)) +
+  labs(y = "Square root turnover")
+```
+
+```{r}
+food |> 
+  autoplot(Turnover^(1/3)) +
+  labs(y = "Cube root turnover")
+```
+
+```{r}
+food |> 
+  autoplot(log(Turnover)) +
+  labs(y = "Log turnover")
+```
+
+```{r}
+food |> 
+  autoplot(-1 / Turnover) +
+  labs(y = "Inverse turnover")
+```
+
+Each of these transformations is close to a member of the family of **Box-Cox transformations**:
+
+$$
+w_t = \left\{\begin{array}{ll}
+        \log(y_t),      & \quad \lambda = 0; \\
+        (sign(y_t)|y_t|^\lambda-1)/\lambda ,         & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+Actually the Bickel-Doksum transformation (allowing for $y_t<0$:
+
+-   $\lambda=1$: no substantive transformation
+
+-   $\lambda=\frac{1}{2}$: square root plus linear transformation
+
+-   $\lambda=0$: natural logarithm
+
+-   $\lambda=-1$: inverse plus 1
+
+**Box-Cox transformations**
+
+```{r}
+food |> 
+  features(Turnover, features = guerrero)
+```
+
+-   This attempts to balance the seasonal fluctuations and random variations across the series
+
+-   Always check the results
+
+-   A low value of $\lambda$ can give extremely large prediction intervals
+
+```{r}
+food |> 
+  autoplot(box_cox(Turnover, 0.0524)) +
+  labs(y = "Box-Cox transformed turnover")
+```
+
+-   Often no transformation needed
+
+-   Simple transformations are easier to explain and work well enough
+
+-   Transformations can have very large effect on PI
+
+-   If some data are zero or negative, then use $\lambda>0$
+
+-   `log1p()` can also be useful for data with zeros
+
+-   Choosing logs is a simple way to force forecasts to be positive
+
+-   Transformations must be reversed to obtain forecasts on the original scale (handled automatically by `fable`).
+
+```{r}
+lambda <- aus_production |> 
+  features(Gas, features = guerrero) |> 
+  pull(lambda_guerrero)
+
+aus_production |> 
+  autoplot(box_cox(Gas, lambda)) +
+  labs(y = "",
+       title = latex2exp::TeX(paste0(
+         "Transformed gas production with $\\lambda$ = ",
+         round(lambda, 2)
+       )))
+```
+
+## 3.2 Time series components
+
+$$
+y_t=f(S_t,T_t,R_t)
+$$
+
+where:
+
+$y_t$ = data at period $t$
+
+$T_t$ = trend-cycle component at period $t$
+
+$S_t$ = seasonal component at period $t$
+
+$R_t$ = remainder component at period $t$
+
+**Additive decomposition**: $y_t=S_t+T_t+R_t$
+
+**Multiplicative decomposition**: $y_t=S_t \times T_t \times R_t$
+
+-   Additive model appropriate if magnitude of seasonal fluctuations does not vary with level
+
+-   If seasonal are proportional to level of series, then multiplicative model appropriate
+
+-   Multiplicative decomposition more prevalent with economic series
+
+-   Alternative: use a Box-Cox transformation, and then use additive decomposition
+
+-   Logs turn multiplicative relationship into an additive relationship
+
+$y_t=S_t \times T_t \times R_t$ –\> $log(y_t)=log(S_t)+log(T_t)+log(R_t)$
+
+```{r}
+us_retail_employment <- us_employment |> 
+  filter(year(Month) >= 1990, Title == "Retail Trade") |> 
+  select(-Series_ID)
+us_retail_employment
+```
+
+```{r}
+us_retail_employment |> 
+  autoplot(Employed) +
+  labs(y = "Persons (thousands)",
+       title = "Total employment in US retail")
+```
+
+```{r}
+us_retail_employment |> 
+  model(stl = STL(Employed))
+```
+
+```{r}
+dcmp <- us_retail_employment |> 
+  model(stl = STL(Employed))
+components(dcmp)
+```
+
+$$
+season\_adjust=y_t-S_t
+$$
+
+```{r}
+components(dcmp) |> autoplot()
+```
+
+```{r}
+us_retail_employment |> 
+  autoplot(Employed, color = "gray") +
+  autolayer(components(dcmp), trend, color = "#D55E00") +
+  labs(y = "Persons (thousands)",
+       title = "Total employment in US retail")
+```
+
+```{r}
+components(dcmp) |> gg_subseries(season_year)
+```
+
+-   Useful by-product of decomposition: an easy way to calculate seasonally adjusted data
+
+-   Additive decomposition: seasonally adjusted data given by
+
+$$
+y_t-S_t=T_t+R_t
+$$
+
+-   Multiplicative decomposition: seasonally adjusted data given by
+
+$$
+y_t/S_t=T_t \times R_t
+$$
+
+```{r}
+us_retail_employment |> 
+  autoplot(Employed, color = "gray") +
+  autolayer(components(dcmp), season_adjust, color = "#0072B2") +
+  labs(y = "Persons (thousands)",
+       title = "Total employment in US retail")
+```
+
+-   We use estimates of $S$ based on past values to seasonally adjust a current value
+
+-   Seasonally adjusted series reflect **remainders** as well as **trend**. Therefore they are not "smooth" and "downturns" or "upturns" can be misleading
+
+-   It is better to use the trend-cycle component to look for turning points
