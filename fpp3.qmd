@@ -1149,3 +1149,202 @@ us_retail_employment |>
 -   Seasonally adjusted series reflect **remainders** as well as **trend**. Therefore they are not "smooth" and "downturns" or "upturns" can be misleading
 
 -   It is better to use the trend-cycle component to look for turning points
+
+## 3.3 Moving averages
+
+The simplest estimate of the trend-cycle uses **moving averages**
+
+$$
+\hat{T}_t = \frac{1}{m} \sum_{j=-k}^k y_{t+j}
+$$
+
+where
+
+$$
+k=\frac{m-1}{2}
+$$
+
+Example with $m=7$:
+
+$$
+k=\frac{m-1}{2}=\frac{7-1}{2}=3
+$$
+
+7-MA (Month Average):
+
+$$
+\hat{T}_t = \frac{1}{7} \sum_{j=-3}^3 y_{t+j}
+$$
+
+$$
+\hat{T}_t=\frac{1}{7}(y_{t-3}+y_{t-2}+y_{t-1}+y_t+y_{t+1}+y_{t+2}+y_{t+3})
+$$
+
+```{r}
+global_economy |> 
+  filter(Country == "Australia") |> 
+  autoplot(Exports) +
+  labs(y = "% of GDP",
+       title = "Total Australian Exports")
+```
+
+```{r}
+aus_exports <- global_economy |>
+  filter(Country == "Australia") |>
+  mutate(
+    `5-MA` = slider::slide_dbl(
+      Exports, mean,
+      .before = 2, .after = 2, .complete = TRUE)
+  )
+```
+
+```{r}
+aus_exports |> 
+  select(Country, Year, Exports, `5-MA`) |> 
+  slice(1:5, 54:58)
+```
+
+```{r}
+aus_exports |>
+  autoplot(Exports) +
+  geom_line(aes(y = `5-MA`), colour = "#D55E00") +
+  labs(y = "% of GDP",
+       title = "Total Australian exports: 5-MA")
+```
+
+```{r}
+aus_exports <- global_economy |>
+  filter(Country == "Australia") |>
+  mutate(
+    `3-MA` = slider::slide_dbl(
+      Exports, mean,
+      .before = 1, .after = 1, .complete = TRUE)
+  ) |> 
+  mutate(
+    `5-MA` = slider::slide_dbl(
+      Exports, mean,
+      .before = 2, .after = 2, .complete = TRUE)
+  ) |> 
+  mutate(
+    `7-MA` = slider::slide_dbl(
+      Exports, mean,
+      .before = 3, .after = 3, .complete = TRUE)
+  ) |> 
+  mutate(
+    `9-MA` = slider::slide_dbl(
+      Exports, mean,
+      .before = 4, .after = 4, .complete = TRUE)
+  ) 
+```
+
+```{r}
+aus_exports |>
+  autoplot(Exports) +
+  geom_line(aes(y = `3-MA`), colour = "#D55E00") +
+  labs(y = "% of GDP",
+       title = "Total Australian exports: 3-MA")
+```
+
+```{r}
+aus_exports |>
+  autoplot(Exports) +
+  geom_line(aes(y = `5-MA`), colour = "#D55E00") +
+  labs(y = "% of GDP",
+       title = "Total Australian exports: 5-MA")
+```
+
+```{r}
+aus_exports |>
+  autoplot(Exports) +
+  geom_line(aes(y = `7-MA`), colour = "#D55E00") +
+  labs(y = "% of GDP",
+       title = "Total Australian exports: 7-MA")
+```
+
+```{r}
+aus_exports |>
+  autoplot(Exports) +
+  geom_line(aes(y = `9-MA`), colour = "#D55E00") +
+  labs(y = "% of GDP",
+       title = "Total Australian exports: 9-MA")
+```
+
+A moving average is a an **average of nearby points**:
+
+-   observations nearby in time are also likely to be **close in value**
+
+-   average eliminates some **randomness** in the data, leaving a smooth trend-cycle component
+
+-   each average computed by dropping **oldest** observation and including **next** observation
+
+-   averages **moves** through time series until trend-cycle computed at each observation possible
+
+Why is there no estimates at end?
+
+-   For a 3-MA, there cannot be estimates at time 1 or time T because the observations at time 0 and T+1 are not available
+
+-   Generally: there cannot be estimates at times near the endpoints
+
+The order of the MA
+
+-   larger order means smoother, flatter curve
+
+-   larger order means more points lost at ends
+
+-   **order = length of season** *or* cycle removes pattern
+
+-   but so far odd orders?
+
+For even orders:
+
+-   4-MA:
+
+$$
+\frac{1}{4}(y_{t-2}+y_{t-1}+y_t+y_{t+1})
+$$
+
+or
+
+$$
+\frac{1}{4}(y_{t-1}+y_t+y_{t+1}+y_{t+2})
+$$
+
+In this case, the data aren't centered. Solution: take a further 2-MA to "centre" the result.
+
+$$
+\hat{T}_t=\frac{1}{2}\{\frac{1}{4}(y_{t-2}+y_{t-1}+y_t+y_{t+1})+\frac{1}{4}(y_{t-1}+y_t+y_{t+1}+y_{t+2})\}=\frac{1}{8}y_{t-2}+\frac{1}{4}y_{t-1}+\frac{1}{4}y_t+\frac{1}{4}y_{t+1}+\frac{1}{8}y_{t+2}
+$$
+
+A moving average of the same length as the season removes the seasonal pattern:
+
+-   For quarterly data, use a $2 \times 4\ MA$
+
+-   For monthly data, use a $2 \times 12\ MA$
+
+```{r}
+beer <- aus_production |>
+  filter(year(Quarter) >= 1992) |>
+  select(Quarter, Beer)
+beer_ma <- beer |>
+  mutate(
+    `4-MA` = slider::slide_dbl(Beer, mean,
+                .before = 1, .after = 2, .complete = TRUE),
+    `2x4-MA` = slider::slide_dbl(`4-MA`, mean,
+                .before = 1, .after = 0, .complete = TRUE)
+  )
+```
+
+```{r}
+us_retail_employment_ma <- us_retail_employment |>
+  mutate(
+    `12-MA` = slider::slide_dbl(Employed, mean,
+                .before = 5, .after = 6, .complete = TRUE),
+    `2x12-MA` = slider::slide_dbl(`12-MA`, mean,
+                .before = 1, .after = 0, .complete = TRUE)
+  )
+us_retail_employment_ma |>
+  autoplot(Employed, colour = "gray") +
+  geom_line(aes(y = `2x12-MA`), colour = "#D55E00") +
+  labs(y = "Persons (thousands)",
+       title = "Total employment in US retail")
+```
