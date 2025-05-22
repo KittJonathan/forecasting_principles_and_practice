@@ -1348,3 +1348,5 @@ us_retail_employment_ma |>
   labs(y = "Persons (thousands)",
        title = "Total employment in US retail")
 ```
+
+## 3.4 Classical decomposition
