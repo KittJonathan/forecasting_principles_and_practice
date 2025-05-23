@@ -1350,3 +1350,339 @@ us_retail_employment_ma |>
 ```
 
 ## 3.4 Classical decomposition
+
+Additive decomposition: $y_t=T_t+S_t+R_t=\hat{T_t}+\hat{S_t}+\hat{R_t}$
+
+Multiplicative decomposition: $y_t=T_t \times S_t \times R_t=\hat{T_t} \times \hat{S_t}_ \times \hat{R_t}$
+
+**1) Step 1**
+
+Estimate $\hat{T}$ using $(2 \times m)-MA$ if $m$ is even. Otherwise, estimate $\hat{T}$ using $m-MA$
+
+**2) Step 2**
+
+Compute de-trended series
+
+-   Additive decomposition: $y_t-\hat{T_t}$
+
+-   Multiplicative decomposition: $y_t / \hat{T_t}$
+
+De-trending
+
+Remove smoothed series $\hat{T_t}$ from $y_t$ to leave $S_t$ and $R_t$.
+
+-   Additive model: $y_t-\hat{T_t}=(\hat{T_t}+\hat{S_t}+\hat{R_t})-\hat{T_t}=\hat{S_t}+\hat{R_t}$
+
+-   Multiplicative model: $y_t/\hat{T_t}=(\hat{T_t} \times \hat{S_t} \times \hat{R_t})/\hat{T_t}=\hat{S_t} \times \hat{R_t}$
+
+**3) Step 3**
+
+Estimating the seasonal component:
+
+-   seasonal index for each season is estimated as an **average** of the detrended series for that season of successive years.
+
+-   e.g., take averages across all Januaries to get $S^{(1)}$ if your data is monthly.
+
+-   If necessary, adjust the seasonal indices so that:
+
+    -   for additive: $S^{(1)} + S^{(2)} + ... + S^{(12)}=0$
+
+    -   for multiplicative: $S^{(1)} + S^{(2)} + ... + S^{(12)}=m$
+
+-   The seasonal component $\hat{S_t}$ simply consists of replications of the seasonal indices.
+
+**4) Step 4**
+
+Remainder component:
+
+-   Additive decomposition: $\hat{R_t}=y_t-\hat{T_t}-\hat{S_t}$
+
+-   Multiplicative decomposition: $\hat{R_t}=y_t/(\hat{T_t}\hat{S_t})$
+
+Classical decomposition:
+
+-   Choose additive or multiplicative depending on which gives the most stable components
+
+-   For multiplicative models, this method of estimation is known as **ratio-to-moving-average method**.
+
+```{r}
+us_retail_employment |> 
+  model(
+    classical_decomposition(Employed, type = "additive")
+  ) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "Classical additive decomposition of total US retail employment", x = "Year")
+```
+
+```{r}
+us_retail_employment |> 
+  model(
+    classical_decomposition(Employed, type = "multiplicative")
+  ) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "Classical multiplicative decomposition of total US retail employment", x = "Year")
+```
+
+Comments on classical decomposition:
+
+-   Estimate of trend is **unavailable** for first few and last few observations
+
+-   **Seasonal component repeats** from year to year. May not be realistic
+
+-   **Not robust to outliers**
+
+-   Newer methods designed to overcome these problems.
+
+## 3.5 Methods used by official statistics agencies
+
+History of time series decomposition
+
+-   Classical methods originated in the 1920s
+
+-   Census II method introduced in 1957. Basis for X-11 method and variants (including X-12-ARIMA, X-13-ARIMA)
+
+-   STL method introduced in 1983
+
+-   TRAMO/SEATS introduced in the 1990s
+
+National statistics offices
+
+-   ABS uses X-12-ARIMA
+
+-   US Census Bureau uses X-13-ARIMA-SEATS
+
+-   Statistics Canada uses X-12-ARIMA
+
+-   ONS (UK) uses X-12-ARIMA
+
+-   EuroStat uses X-13-ARIMA-SEATS
+
+**X-11 decomposition**
+
+```{r}
+x11_dcmp <- us_retail_employment |> 
+  model(x11 = X_13ARIMA_SEATS(Employed ~ x11())) |> 
+  components()
+
+autoplot(x11_dcmp)
+```
+
+Advantages:
+
+-   Relatively robust to outliers
+
+-   Completely automated choices for trend ans seasonal changes
+
+-   Very widely tested on economic data over a long period of time
+
+Disadvantages:
+
+-   No prediction/confidence intervals
+
+-   Ad hoc method with no underlying model
+
+-   Only developed for quarterly and monthly data
+
+Extensions: X-12-ARIMA and X-13-ARIMA
+
+-   The X-11, X-12-ARIMA and X-13-ARIMA methods are based on Census II decomposition
+
+-   These allow adjustments for trading days and other explanatory variables
+
+-   Known outliers can be omitted
+
+-   Level shifts and ramp effects can be modelled
+
+-   Missing values estimated and replaced
+
+-   Holiday factors (e.g. Easter, Labour Day) can be estimated
+
+**X-13-ARIMA-SEATS\
+**
+
+```{r}
+seats_dcmp <- us_retail_employment |> 
+  model(seats = X_13ARIMA_SEATS(Employed ~ seats())) |> 
+  components()
+
+autoplot(seats_dcmp)
+```
+
+Advantages:
+
+-   Model-based
+
+-   Smooth trend estimate
+
+-   Allows estimated at end points
+
+-   Allows changing seasonality
+
+-   Developed for economic data
+
+Disadvantages:
+
+-   Only developed for quarterly and monthly data
+
+## 3.6 STL decomposition
+
+-   STL: "Seasonal and Trend decomposition using Loess"
+
+-   Very versatile and robust
+
+-   Unlike X-12-ARIMA, STL will handle any type of seasonality
+
+-   Seasonal component allowed to change over time, and rate of change controlled by user
+
+-   Smoothness of trend-cycle also controlled by user
+
+-   Robust to outliers
+
+-   Not trading day or calendar adjustments
+
+-   Only additive
+
+-   Take logs to get multiplicative decomposition
+
+-   Use Box-Cox transformations to get other decompositions
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed)) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = "periodic"))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 49))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 19))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 5))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 15) + trend(window = 5))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 15) + trend(window = 6665))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 15) + trend(window = 15))) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 15) + trend(window = 15),
+            robust = TRUE)) |> 
+  components() |> 
+  autoplot() +
+  labs(title = "STL decomposition: US retail employment")
+```
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed ~ season(window = 5))) |> 
+  components()
+  
+us_retail_employment |> 
+  model(STL(
+    Employed ~ trend(window = 15) + 
+      season(window = "periodic"),
+    robust = TRUE
+  )) |> 
+  components()
+```
+
+-   `trend(window = ?)` controls wiggliness of trend component
+
+-   `season(window = ?)` controls variation on seasonal component
+
+-   `season(window = 'periodic')` is equivalent to an infinite window
+
+```{r}
+us_retail_employment |> 
+  model(STL(Employed)) |> 
+  components() |> 
+  autoplot()
+```
+
+-   `STL()` chooses `season(window=13)` by default
+
+-   Can include transformations
+
+**STL decomposition**
+
+-   Algorithm that updates trend and seasonal components iteratively
+
+-   Starts with $\hat{T_t}=0$
+
+-   Uses a mixture of loess and moving averages to successively refine the trend and seasonal estimates
+
+-   The trend window controls loess bandwidth applied to deseasonalised values
+
+-   The season window controls loess bandwidth applied to detrended subseries
+
+-   Robustness weights based on remainder
+
+-   Default season: `window=13`
+
+-   Default trend: `window=nextodd(ceiling((1.5*period)/(1-(1.5/s.window)))`
+
+# Chapter 4 - Time series features
+
+## 4.1 Some simple statistics
+
+```{r}
+tourism |> 
+  features(Trips, list(mean = mean)) |> 
+  arrange(mean)
+```
+
+```{r}
+tourism |> 
+  features(Trips, quantile)
+```
+
+## 1.2 ACF features
