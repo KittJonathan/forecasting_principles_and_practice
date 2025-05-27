@@ -1685,4 +1685,554 @@ tourism |>
   features(Trips, quantile)
 ```
 
-## 1.2 ACF features
+## 4.2 ACF features
+
+-   The sum of the first ten squared autocorrelation coefficients is a useful summary of how much autocorrelation there is in a series, regardless of lag.
+
+-   We can also compute autocorrelations of the changes in the series between periods: we "difference" the data and create a new time series consisting of the differences between consecutive observations. Then we can compute the autocorrelations of this new differenced series.
+
+The `feat_acf()` function computes a selection of autocorrelations:
+
+-   the first autocorrelation coefficient from the original data
+
+-   the sum of squares of the first ten autocorrelation coefficients from the original data
+
+-   the first autocorrelation coefficient from the differenced data
+
+-   the sum of squares of the first ten autocorrelation coefficients from the differenced data
+
+-   the first autocorrelation coefficient from the twice differenced data
+
+-   the sum of squares of the first ten autocorrelation coefficients from the twice differenced data
+
+-   for seasonal data, the autocorrelation coefficient at the first seasonal lag is also returned
+
+```{r}
+tourism |> features(Trips, feat_acf)
+```
+
+## 4.3 STL features
+
+The decomposition is written as
+
+$$
+y_t=T_t+S_t+R_t
+$$
+
+For strongly trended data, the seasonally adjusted data should have much more variation than the remainder component. Therefore, $Var(R_t)/(Var(T_t+S_t)$ should be relatively small.
+
+But for data with little or no trend, the two variances should be approximately the same. So we define the strength of trend as:
+
+$$
+F_T=max(0,1-\frac{Var(R_t)}{Var(T_t+S_t})
+$$
+
+The strength of seasonality is defined similarly, but with respect to the detrended data rather than the seasonally adjusted data:
+
+$$
+F_S=max(0,1-\frac{Var(R_t)}{Var(S_t+R_t}
+$$
+
+```{r}
+tourism |> 
+  features(Trips, feat_stl)
+```
+
+```{r}
+tourism |>
+  features(Trips, feat_stl) |>
+  ggplot(aes(x = trend_strength, y = seasonal_strength_year,
+             col = Purpose)) +
+  geom_point() +
+  facet_wrap(vars(State))
+```
+
+```{r}
+tourism |>
+  features(Trips, feat_stl) |>
+  filter(
+    seasonal_strength_year == max(seasonal_strength_year)
+  ) |>
+  left_join(tourism, by = c("State", "Region", "Purpose"), multiple = "all") |>
+  ggplot(aes(x = Quarter, y = Trips)) +
+  geom_line() +
+  facet_grid(vars(State, Region, Purpose))
+```
+
+## 4.4 Other features
+
+In the `feasts` package: `coef_hurst`, `feat_spectral`, `box_pierce`, ...
+
+## 4.5 Exploring Australian tourism data
+
+All of the features included in the `feasts` package can be computed in one line:
+
+```{r}
+tourism_features <- tourism |> 
+  features(Trips, feature_set(pkgs = "feasts"))
+tourism_features
+```
+
+This gives 48 features for every combination of the three key variables (`Region`, `State` and `Purpose`).
+
+We can do pairwise plots of groups of features:
+
+```{r}
+library(glue)
+tourism_features |>
+  select_at(vars(contains("season"), Purpose)) |>
+  mutate(
+    seasonal_peak_year = seasonal_peak_year +
+      4*(seasonal_peak_year==0),
+    seasonal_trough_year = seasonal_trough_year +
+      4*(seasonal_trough_year==0),
+    seasonal_peak_year = glue("Q{seasonal_peak_year}"),
+    seasonal_trough_year = glue("Q{seasonal_trough_year}"),
+  ) |>
+  GGally::ggpairs(mapping = aes(colour = Purpose))
+```
+
+We can compute the principal components of the tourism features:
+
+```{r}
+library(broom)
+pcs <- tourism_features |>
+  select(-State, -Region, -Purpose) |>
+  prcomp(scale = TRUE) |>
+  augment(tourism_features)
+pcs |>
+  ggplot(aes(x = .fittedPC1, y = .fittedPC2, col = Purpose)) +
+  geom_point() +
+  theme(aspect.ratio = 1)
+```
+
+```{r}
+outliers <- pcs |>
+  filter(.fittedPC1 > 10) |>
+  select(Region, State, Purpose, .fittedPC1, .fittedPC2)
+outliers
+#> # A tibble: 4 × 5
+#>   Region                 State             Purpose  .fittedPC1 .fittedPC2
+#>   <chr>                  <chr>             <chr>         <dbl>      <dbl>
+#> 1 Australia's North West Western Australia Business       13.4    -11.3  
+#> 2 Australia's South West Western Australia Holiday        10.9      0.880
+#> 3 Melbourne              Victoria          Holiday        12.3    -10.4  
+#> 4 South Coast            New South Wales   Holiday        11.9      9.42
+outliers |>
+  left_join(tourism, by = c("State", "Region", "Purpose"), multiple = "all") |>
+  mutate(Series = glue("{State}", "{Region}", "{Purpose}", .sep = "\n\n")) |>
+  ggplot(aes(x = Quarter, y = Trips)) +
+  geom_line() +
+  facet_grid(Series ~ ., scales = "free") +
+  labs(title = "Outlying time series in PC space")
+```
+
+# Chapter 5 - The forecaster's toolbox
+
+## 5.1 A tidy forecasting workflow
+
+The process of producing forecasts can be split up into a few fundamental steps:
+
+1.  Preparing data - generate a `tsibble`
+2.  Data visualisation
+3.  Specifying a model
+4.  Model estimation - `model()` -\> `mable`
+5.  Accuracy & performance evaluation
+6.  Producing forecasts - `forecast()` -\> `fable`
+
+![](images/clipboard-1016832891.png)
+
+**Data preparation (tidy)**
+
+```{r}
+gdppc <- global_economy |> 
+  mutate(GDP_per_capita = GDP / Population) |> 
+  select(Year, Country, GDP, Population, GDP_per_capita)
+gdppc
+```
+
+**Visualise**
+
+```{r}
+gdppc |> 
+  filter(Country == "Sweden") |> 
+  autoplot(GDP_per_capita) +
+  labs(title = "GDP per capita for Sweden",
+       y = "$US")
+```
+
+**Specify a model**
+
+```{r}
+fit <- gdppc |> 
+  model(trend_model = TSLM(GDP_per_capita ~ trend()))
+fit
+```
+
+A `mable` is a model table, each cell corresponds to a fitted model.
+
+**Evaluate the model**
+
+```{r}
+fit |> 
+  forecast(h = "3 years")
+```
+
+A `fable` is a forecast table with point forecasts and distributions.
+
+**Visualising forecasts**
+
+```{r}
+fit |> 
+  forecast(h = "3 years") |> 
+  filter(Country == "Sweden") |> 
+  autoplot(gdppc) +
+  labs(title = "GDP per capita for Sweden",
+       y = "$US")
+```
+
+## 5.2 Some simple forecasting methods
+
+```{r}
+bricks <- aus_production |> 
+  filter_index("1970 Q1" ~ "2004 Q1") |> 
+  select(Bricks)
+```
+
+**Mean method**
+
+-   Forecast of all future values is equal to mean of historical data $\{y_t,...,y_T\}$
+
+-   Forecasts: $\hat{y}_{T+h|T}=\bar{y}=(y_1+...+y_T)/T$
+
+```{r}
+bricks |> 
+  model(MEAN(Bricks))
+```
+
+```{r}
+bricks <- aus_production |>
+  filter(!is.na(Bricks)) |>
+  mutate(average = mean(Bricks))
+
+fc <- bricks |>
+  filter(row_number() == n()) |>
+  as_tibble() |>
+  unnest(Quarter = list(as.Date(Quarter) + months(c(0, 12 * 5))))
+
+bricks |>
+  ggplot(aes(x = Quarter, y = Bricks)) +
+  geom_line() +
+  geom_line(aes(y = average), colour = "#0072B2", linetype = "dashed") +
+  geom_line(aes(y = average), data = fc, colour = "#0072B2") +
+  labs(title = "Clay brick production in Australia")
+```
+
+**Naïve method**
+
+-   Forecasts equal to last observed value
+
+-   Forecasts: $\hat{y}_{T+h|T}=y_T$
+
+-   Consequence of efficient market hypothesis
+
+```{r}
+bricks |> model(NAIVE(Bricks))
+```
+
+```{r}
+bricks |>
+  filter(!is.na(Bricks)) |>
+  model(NAIVE(Bricks)) |>
+  forecast(h = "5 years") |>
+  autoplot(filter(bricks, year(Quarter) > 1990), level = NULL) +
+  geom_point(data = slice(bricks, n()), aes(y = Bricks), colour = "#0072B2") +
+  labs(title = "Clay brick production in Australia")
+```
+
+**Seasonal naïve method**
+
+-   Forecasts equal to last value from same season
+
+-   Forecasts: $\hat{y}_{T+h|T}=y_{T+h-m(k+1)}$ where $m$ = seasonal period and $k$ is the integer part of $(h-1)/m$
+
+```{r}
+bricks |> model(SNAIVE(Bricks ~ lag("year")))
+```
+
+```{r}
+bricks |>
+  model(SNAIVE(Bricks ~ lag("year"))) |>
+  forecast(h = "5 years") |>
+  autoplot(filter(bricks, year(Quarter) > 1990), level = NULL) +
+  geom_point(data = slice(bricks, (n() - 3):n()), aes(y = Bricks), colour = "#0072B2") +
+  labs(title = "Clay brick production in Australia")
+```
+
+**RW: drift method**
+
+RW: Random Walk
+
+-   Forecasts equal to last value plus average change
+
+-   Forecasts:
+
+$$
+\hat{y}_{T+h|T}=y_T+\frac{h}{T-1}\sum_{t=2}^T(y_t-y_{t-1})=y_T+\frac{h}{T-1}(y_T-y_1)
+$$
+
+-   Equivalent to extrapolating a line drawn between first and last observations
+
+```{r}
+bricks |> model(RW(Bricks ~ drift()))
+```
+
+```{r}
+aus_production |>
+  filter(!is.na(Bricks)) |>
+  model(RW(Bricks ~ drift())) |>
+  forecast(h = "5 years") |>
+  autoplot(aus_production, level = NULL) +
+  geom_line(
+    data = slice(aus_production, range(cumsum(!is.na(Bricks)))),
+    aes(y = Bricks), linetype = "dashed", colour = "#0072B2"
+  ) +
+  labs(title = "Clay brick production in Australia")
+```
+
+**Model fitting**
+
+The `model()` function trains models to data.
+
+```{r}
+brick_fit <- aus_production |> 
+  filter(!is.na(Bricks)) |> 
+  model(
+    Seasonal_naive = SNAIVE(Bricks),
+    Naive = NAIVE(Bricks),
+    Drift = RW(Bricks ~ drift()),
+    Mean = MEAN(Bricks)
+  )
+```
+
+```{r}
+brick_fit
+```
+
+**Producing forecasts**
+
+```{r}
+brick_fc <- brick_fit |> 
+  forecast(h = "5 years")
+```
+
+```{r}
+brick_fc
+```
+
+**Visualising forecasts**
+
+```{r}
+brick_fc |> 
+  autoplot(aus_production, level = NULL) +
+  labs(title = "Clay brick production in Australia",
+       y = "Millions of bricks") +
+  guides(colour = guide_legend(title = "Forecast"))
+  
+```
+
+**Facebook closing stock price**
+
+```{r}
+# Extract training data
+fb_stock <- gafa_stock |> 
+  filter(Symbol == "FB") |> 
+  mutate(trading_day = row_number()) |> 
+  update_tsibble(index = trading_day, regular = TRUE)
+
+# Specify, estimate and forecast
+fb_stock |> 
+  model(
+    Mean = MEAN(Close),
+    Naive = NAIVE(Close),
+    Drift = RW(Close ~ drift())
+  ) |> 
+  forecast(h = 42) |> 
+  autoplot(fb_stock, level = NULL) +
+  labs(title = "Facebook closing stock price",
+       y = "$US") +
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+**Australian quarterly beer production**
+
+```{r}
+# Set training data from 1992 to 2006
+train <- aus_production |>
+  filter_index("1992 Q1" ~ "2006 Q4")
+# Fit the models
+beer_fit <- train |>
+  model(
+    Mean = MEAN(Beer),
+    `Naïve` = NAIVE(Beer),
+    `Seasonal naïve` = SNAIVE(Beer)
+  )
+# Generate forecasts for 14 quarters
+beer_fc <- beer_fit |> forecast(h = 14)
+# Plot forecasts against actual values
+beer_fc |>
+  autoplot(train, level = NULL) +
+  autolayer(
+    filter_index(aus_production, "2007 Q1" ~ .),
+    colour = "black"
+  ) +
+  labs(
+    y = "Megalitres",
+    title = "Forecasts for quarterly beer production"
+  ) +
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+## 5.3 Fitted values and residuals
+
+-   $\hat{y}_{t|t-1}$ is the forecast of $y_t$ based on observations $y_1,...,y_{t-1}$
+
+-   we call these "fitted values"
+
+-   sometimes drop the subscript: $\hat{y_t} \equiv \hat{y}_{t|t-1}$
+
+-   often not true forecasts since parameters are estimated on all data
+
+For example:
+
+-   $\hat{y}_t=\bar{t}$ for average method
+
+-   $\hat{y}=y_{t-1}+(y_T-y_1)/(T-1)$ for drift method
+
+**Residuals in forecasting**: difference between observed value and its fitted value $e_t=y_t-\hat{y}_{t|t-1}$.
+
+Assumptions:
+
+-   $\{e_t\}$ uncorrelated. If they aren't, then information left in residuals that should be used in computing forecasts.
+
+-   $\{e_t\}$ have mean zero. If they don't, then forecasts are biased.
+
+Useful properties (for distributions & prediction intervals
+
+-   $\{e_t\}$ have constant variance.
+
+-   $\{e_t\}$ are normally distributed.
+
+To compute the fitted values and residuals:
+
+```{r}
+augment(beer_fit)
+```
+
+## 5.4 Residual diagnostics
+
+Facebook closing stock price
+
+```{r}
+fb_stock |> 
+  autoplot(Close)
+```
+
+```{r}
+fit <- fb_stock |> 
+  model(NAIVE(Close))
+augment(fit)
+```
+
+```{r}
+augment(fit) |> 
+  ggplot(aes(x = trading_day)) +
+  geom_line(aes(y = Close, colour = "Data")) +
+  geom_line(aes(y = .fitted, colour = "Fitted"))
+```
+
+```{r}
+augment(fit) |> 
+  filter(trading_day > 1100) |> 
+  ggplot(aes(x = trading_day)) +
+  geom_line(aes(y = Close, colour = "Data")) +
+  geom_line(aes(y = .fitted, colour = "Fitted"))
+```
+
+```{r}
+augment(fit) |> 
+  autoplot(.resid) +
+  labs(y = "$US",
+       title = "Residuals from naïve method")
+```
+
+```{r}
+augment(fit) |> 
+  ggplot(aes(x = .resid)) +
+  geom_histogram(bins = 150) +
+  labs(title = "Histogram of residuals")
+```
+
+```{r}
+augment(fit) |> 
+  ACF(.resid) |> 
+  autoplot() +
+  labs(title = "ACF of residuals")
+```
+
+```{r}
+gg_tsresiduals(fit)
+```
+
+ACF of residuals
+
+-   We assume that the residuals are white noise (uncorrelated, mean zero, constant variance). If they aren't, then there is information left in the residuals that should be used in computing forecasts.
+
+-   So a standard residual diagnostic is to check the ACF of the residuals of a forecasting method.
+
+-   We *expect* these to look like white noise.
+
+**Portmanteau tests**
+
+$r_k$=autocorrelation of residual at lag $k$
+
+Consider a whole set of $r_k$ values, and develop a test to see whether the set is significantly different from a zero test.
+
+Box-Pierce test :
+
+$$
+Q=T\sum_{k=1}^lr_k^2
+$$
+
+where $l$ is max lag being considered and $T$ is number of observations.
+
+-   if each $r_k$ close to 0, $Q$ will be small
+
+-   if some $r_k$ values large (positive or negative), $Q$ will be large
+
+Ljung-Box test :
+
+$$
+Q^*=T(T+2)\sum_{k=1}^l(T-k)^{-1}r_k^2
+$$
+
+where $k$ is max lag being considered and $T$ is number of observations.
+
+-   my preferences: $l$=10 for non-seasonal data, $l$=2m for seasonal data (where $m$ is seasonal period)
+
+-   better performance, especially in small samples
+
+-   if data were white noise, $Q^*$ has a $\chi^2$ distribution with $l$ degrees of freedom
+
+-   lag = $l$
+
+```{r}
+augment(fit) |> 
+  features(.resid, ljung_box, lag = 10)
+```
+
+If pval \< 0.05, we reject the white noise hypothesis.
+
+In our case, we accept the hypothesis that the residuals are not easily distinguished from white noise.
+
+## 5.5 Distributional forecasts and prediction intervals
