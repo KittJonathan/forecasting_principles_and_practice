@@ -2254,6 +2254,1905 @@ k=\frac{m-1}{2}=\frac{7-1}{2}=3
 </div>
 </div>
 </div>
+<p>A moving average is a an <strong>average of nearby points</strong>:</p>
+<ul>
+<li><p>observations nearby in time are also likely to be <strong>close in value</strong></p></li>
+<li><p>average eliminates some <strong>randomness</strong> in the data, leaving a smooth trend-cycle component</p></li>
+<li><p>each average computed by dropping <strong>oldest</strong> observation and including <strong>next</strong> observation</p></li>
+<li><p>averages <strong>moves</strong> through time series until trend-cycle computed at each observation possible</p></li>
+</ul>
+<p>Why is there no estimates at end?</p>
+<ul>
+<li><p>For a 3-MA, there cannot be estimates at time 1 or time T because the observations at time 0 and T+1 are not available</p></li>
+<li><p>Generally: there cannot be estimates at times near the endpoints</p></li>
+</ul>
+<p>The order of the MA</p>
+<ul>
+<li><p>larger order means smoother, flatter curve</p></li>
+<li><p>larger order means more points lost at ends</p></li>
+<li><p><strong>order = length of season</strong> <em>or</em> cycle removes pattern</p></li>
+<li><p>but so far odd orders?</p></li>
+</ul>
+<p>For even orders:</p>
+<ul>
+<li>4-MA:</li>
+</ul>
+<p><span class="math display">\[
+\frac{1}{4}(y_{t-2}+y_{t-1}+y_t+y_{t+1})
+\]</span></p>
+<p>or</p>
+<p><span class="math display">\[
+\frac{1}{4}(y_{t-1}+y_t+y_{t+1}+y_{t+2})
+\]</span></p>
+<p>In this case, the data aren’t centered. Solution: take a further 2-MA to “centre” the result.</p>
+<p><span class="math display">\[
+\hat{T}_t=\frac{1}{2}\{\frac{1}{4}(y_{t-2}+y_{t-1}+y_t+y_{t+1})+\frac{1}{4}(y_{t-1}+y_t+y_{t+1}+y_{t+2})\}=\frac{1}{8}y_{t-2}+\frac{1}{4}y_{t-1}+\frac{1}{4}y_t+\frac{1}{4}y_{t+1}+\frac{1}{8}y_{t+2}
+\]</span></p>
+<p>A moving average of the same length as the season removes the seasonal pattern:</p>
+<ul>
+<li><p>For quarterly data, use a <span class="math inline">\(2 \times 4\ MA\)</span></p></li>
+<li><p>For monthly data, use a <span class="math inline">\(2 \times 12\ MA\)</span></p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb158"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb158-1"><a href="#cb158-1" aria-hidden="true" tabindex="-1"></a>beer <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span></span>
+<span id="cb158-2"><a href="#cb158-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&gt;=</span> <span class="dv">1992</span>) <span class="sc">|&gt;</span></span>
+<span id="cb158-3"><a href="#cb158-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Quarter, Beer)</span>
+<span id="cb158-4"><a href="#cb158-4" aria-hidden="true" tabindex="-1"></a>beer_ma <span class="ot">&lt;-</span> beer <span class="sc">|&gt;</span></span>
+<span id="cb158-5"><a href="#cb158-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb158-6"><a href="#cb158-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">4-MA</span><span class="st">`</span> <span class="ot">=</span> slider<span class="sc">::</span><span class="fu">slide_dbl</span>(Beer, mean,</span>
+<span id="cb158-7"><a href="#cb158-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">.before =</span> <span class="dv">1</span>, <span class="at">.after =</span> <span class="dv">2</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb158-8"><a href="#cb158-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">2x4-MA</span><span class="st">`</span> <span class="ot">=</span> slider<span class="sc">::</span><span class="fu">slide_dbl</span>(<span class="st">`</span><span class="at">4-MA</span><span class="st">`</span>, mean,</span>
+<span id="cb158-9"><a href="#cb158-9" aria-hidden="true" tabindex="-1"></a>                <span class="at">.before =</span> <span class="dv">1</span>, <span class="at">.after =</span> <span class="dv">0</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb158-10"><a href="#cb158-10" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb159"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb159-1"><a href="#cb159-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment_ma <span class="ot">&lt;-</span> us_retail_employment <span class="sc">|&gt;</span></span>
+<span id="cb159-2"><a href="#cb159-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb159-3"><a href="#cb159-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">12-MA</span><span class="st">`</span> <span class="ot">=</span> slider<span class="sc">::</span><span class="fu">slide_dbl</span>(Employed, mean,</span>
+<span id="cb159-4"><a href="#cb159-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">6</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb159-5"><a href="#cb159-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">2x12-MA</span><span class="st">`</span> <span class="ot">=</span> slider<span class="sc">::</span><span class="fu">slide_dbl</span>(<span class="st">`</span><span class="at">12-MA</span><span class="st">`</span>, mean,</span>
+<span id="cb159-6"><a href="#cb159-6" aria-hidden="true" tabindex="-1"></a>                <span class="at">.before =</span> <span class="dv">1</span>, <span class="at">.after =</span> <span class="dv">0</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb159-7"><a href="#cb159-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb159-8"><a href="#cb159-8" aria-hidden="true" tabindex="-1"></a>us_retail_employment_ma <span class="sc">|&gt;</span></span>
+<span id="cb159-9"><a href="#cb159-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(Employed, <span class="at">colour =</span> <span class="st">"gray"</span>) <span class="sc">+</span></span>
+<span id="cb159-10"><a href="#cb159-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> <span class="st">`</span><span class="at">2x12-MA</span><span class="st">`</span>), <span class="at">colour =</span> <span class="st">"#D55E00"</span>) <span class="sc">+</span></span>
+<span id="cb159-11"><a href="#cb159-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="st">"Persons (thousands)"</span>,</span>
+<span id="cb159-12"><a href="#cb159-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Total employment in US retail"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 12 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-108-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="classical-decomposition" class="level2">
+<h2 class="anchored" data-anchor-id="classical-decomposition">3.4 Classical decomposition</h2>
+<p>Additive decomposition: <span class="math inline">\(y_t=T_t+S_t+R_t=\hat{T_t}+\hat{S_t}+\hat{R_t}\)</span></p>
+<p>Multiplicative decomposition: <span class="math inline">\(y_t=T_t \times S_t \times R_t=\hat{T_t} \times \hat{S_t}_ \times \hat{R_t}\)</span></p>
+<p><strong>1) Step 1</strong></p>
+<p>Estimate <span class="math inline">\(\hat{T}\)</span> using <span class="math inline">\((2 \times m)-MA\)</span> if <span class="math inline">\(m\)</span> is even. Otherwise, estimate <span class="math inline">\(\hat{T}\)</span> using <span class="math inline">\(m-MA\)</span></p>
+<p><strong>2) Step 2</strong></p>
+<p>Compute de-trended series</p>
+<ul>
+<li><p>Additive decomposition: <span class="math inline">\(y_t-\hat{T_t}\)</span></p></li>
+<li><p>Multiplicative decomposition: <span class="math inline">\(y_t / \hat{T_t}\)</span></p></li>
+</ul>
+<p>De-trending</p>
+<p>Remove smoothed series <span class="math inline">\(\hat{T_t}\)</span> from <span class="math inline">\(y_t\)</span> to leave <span class="math inline">\(S_t\)</span> and <span class="math inline">\(R_t\)</span>.</p>
+<ul>
+<li><p>Additive model: <span class="math inline">\(y_t-\hat{T_t}=(\hat{T_t}+\hat{S_t}+\hat{R_t})-\hat{T_t}=\hat{S_t}+\hat{R_t}\)</span></p></li>
+<li><p>Multiplicative model: <span class="math inline">\(y_t/\hat{T_t}=(\hat{T_t} \times \hat{S_t} \times \hat{R_t})/\hat{T_t}=\hat{S_t} \times \hat{R_t}\)</span></p></li>
+</ul>
+<p><strong>3) Step 3</strong></p>
+<p>Estimating the seasonal component:</p>
+<ul>
+<li><p>seasonal index for each season is estimated as an <strong>average</strong> of the detrended series for that season of successive years.</p></li>
+<li><p>e.g., take averages across all Januaries to get <span class="math inline">\(S^{(1)}\)</span> if your data is monthly.</p></li>
+<li><p>If necessary, adjust the seasonal indices so that:</p>
+<ul>
+<li><p>for additive: <span class="math inline">\(S^{(1)} + S^{(2)} + ... + S^{(12)}=0\)</span></p></li>
+<li><p>for multiplicative: <span class="math inline">\(S^{(1)} + S^{(2)} + ... + S^{(12)}=m\)</span></p></li>
+</ul></li>
+<li><p>The seasonal component <span class="math inline">\(\hat{S_t}\)</span> simply consists of replications of the seasonal indices.</p></li>
+</ul>
+<p><strong>4) Step 4</strong></p>
+<p>Remainder component:</p>
+<ul>
+<li><p>Additive decomposition: <span class="math inline">\(\hat{R_t}=y_t-\hat{T_t}-\hat{S_t}\)</span></p></li>
+<li><p>Multiplicative decomposition: <span class="math inline">\(\hat{R_t}=y_t/(\hat{T_t}\hat{S_t})\)</span></p></li>
+</ul>
+<p>Classical decomposition:</p>
+<ul>
+<li><p>Choose additive or multiplicative depending on which gives the most stable components</p></li>
+<li><p>For multiplicative models, this method of estimation is known as <strong>ratio-to-moving-average method</strong>.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb161"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb161-1"><a href="#cb161-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb161-2"><a href="#cb161-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb161-3"><a href="#cb161-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">classical_decomposition</span>(Employed, <span class="at">type =</span> <span class="st">"additive"</span>)</span>
+<span id="cb161-4"><a href="#cb161-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb161-5"><a href="#cb161-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb161-6"><a href="#cb161-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb161-7"><a href="#cb161-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Classical additive decomposition of total US retail employment"</span>, <span class="at">x =</span> <span class="st">"Year"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 6 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-109-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb163"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb163-1"><a href="#cb163-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb163-2"><a href="#cb163-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb163-3"><a href="#cb163-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">classical_decomposition</span>(Employed, <span class="at">type =</span> <span class="st">"multiplicative"</span>)</span>
+<span id="cb163-4"><a href="#cb163-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb163-5"><a href="#cb163-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb163-6"><a href="#cb163-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb163-7"><a href="#cb163-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Classical multiplicative decomposition of total US retail employment"</span>, <span class="at">x =</span> <span class="st">"Year"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 6 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-110-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Comments on classical decomposition:</p>
+<ul>
+<li><p>Estimate of trend is <strong>unavailable</strong> for first few and last few observations</p></li>
+<li><p><strong>Seasonal component repeats</strong> from year to year. May not be realistic</p></li>
+<li><p><strong>Not robust to outliers</strong></p></li>
+<li><p>Newer methods designed to overcome these problems.</p></li>
+</ul>
+</section>
+<section id="methods-used-by-official-statistics-agencies" class="level2">
+<h2 class="anchored" data-anchor-id="methods-used-by-official-statistics-agencies">3.5 Methods used by official statistics agencies</h2>
+<p>History of time series decomposition</p>
+<ul>
+<li><p>Classical methods originated in the 1920s</p></li>
+<li><p>Census II method introduced in 1957. Basis for X-11 method and variants (including X-12-ARIMA, X-13-ARIMA)</p></li>
+<li><p>STL method introduced in 1983</p></li>
+<li><p>TRAMO/SEATS introduced in the 1990s</p></li>
+</ul>
+<p>National statistics offices</p>
+<ul>
+<li><p>ABS uses X-12-ARIMA</p></li>
+<li><p>US Census Bureau uses X-13-ARIMA-SEATS</p></li>
+<li><p>Statistics Canada uses X-12-ARIMA</p></li>
+<li><p>ONS (UK) uses X-12-ARIMA</p></li>
+<li><p>EuroStat uses X-13-ARIMA-SEATS</p></li>
+</ul>
+<p><strong>X-11 decomposition</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb165"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb165-1"><a href="#cb165-1" aria-hidden="true" tabindex="-1"></a>x11_dcmp <span class="ot">&lt;-</span> us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb165-2"><a href="#cb165-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">x11 =</span> <span class="fu">X_13ARIMA_SEATS</span>(Employed <span class="sc">~</span> <span class="fu">x11</span>())) <span class="sc">|&gt;</span> </span>
+<span id="cb165-3"><a href="#cb165-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span>
+<span id="cb165-4"><a href="#cb165-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb165-5"><a href="#cb165-5" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(x11_dcmp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-111-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Advantages:</p>
+<ul>
+<li><p>Relatively robust to outliers</p></li>
+<li><p>Completely automated choices for trend ans seasonal changes</p></li>
+<li><p>Very widely tested on economic data over a long period of time</p></li>
+</ul>
+<p>Disadvantages:</p>
+<ul>
+<li><p>No prediction/confidence intervals</p></li>
+<li><p>Ad hoc method with no underlying model</p></li>
+<li><p>Only developed for quarterly and monthly data</p></li>
+</ul>
+<p>Extensions: X-12-ARIMA and X-13-ARIMA</p>
+<ul>
+<li><p>The X-11, X-12-ARIMA and X-13-ARIMA methods are based on Census II decomposition</p></li>
+<li><p>These allow adjustments for trading days and other explanatory variables</p></li>
+<li><p>Known outliers can be omitted</p></li>
+<li><p>Level shifts and ramp effects can be modelled</p></li>
+<li><p>Missing values estimated and replaced</p></li>
+<li><p>Holiday factors (e.g.&nbsp;Easter, Labour Day) can be estimated</p></li>
+</ul>
+<p><strong>X-13-ARIMA-SEATS<br>
+</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb166"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb166-1"><a href="#cb166-1" aria-hidden="true" tabindex="-1"></a>seats_dcmp <span class="ot">&lt;-</span> us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb166-2"><a href="#cb166-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">seats =</span> <span class="fu">X_13ARIMA_SEATS</span>(Employed <span class="sc">~</span> <span class="fu">seats</span>())) <span class="sc">|&gt;</span> </span>
+<span id="cb166-3"><a href="#cb166-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span>
+<span id="cb166-4"><a href="#cb166-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb166-5"><a href="#cb166-5" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(seats_dcmp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-112-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Advantages:</p>
+<ul>
+<li><p>Model-based</p></li>
+<li><p>Smooth trend estimate</p></li>
+<li><p>Allows estimated at end points</p></li>
+<li><p>Allows changing seasonality</p></li>
+<li><p>Developed for economic data</p></li>
+</ul>
+<p>Disadvantages:</p>
+<ul>
+<li>Only developed for quarterly and monthly data</li>
+</ul>
+</section>
+<section id="stl-decomposition" class="level2">
+<h2 class="anchored" data-anchor-id="stl-decomposition">3.6 STL decomposition</h2>
+<ul>
+<li><p>STL: “Seasonal and Trend decomposition using Loess”</p></li>
+<li><p>Very versatile and robust</p></li>
+<li><p>Unlike X-12-ARIMA, STL will handle any type of seasonality</p></li>
+<li><p>Seasonal component allowed to change over time, and rate of change controlled by user</p></li>
+<li><p>Smoothness of trend-cycle also controlled by user</p></li>
+<li><p>Robust to outliers</p></li>
+<li><p>Not trading day or calendar adjustments</p></li>
+<li><p>Only additive</p></li>
+<li><p>Take logs to get multiplicative decomposition</p></li>
+<li><p>Use Box-Cox transformations to get other decompositions</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb167"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb167-1"><a href="#cb167-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb167-2"><a href="#cb167-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed)) <span class="sc">|&gt;</span> </span>
+<span id="cb167-3"><a href="#cb167-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb167-4"><a href="#cb167-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb167-5"><a href="#cb167-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-113-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb168"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb168-1"><a href="#cb168-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb168-2"><a href="#cb168-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="st">"periodic"</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb168-3"><a href="#cb168-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb168-4"><a href="#cb168-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb168-5"><a href="#cb168-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-114-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb169"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb169-1"><a href="#cb169-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb169-2"><a href="#cb169-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">49</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb169-3"><a href="#cb169-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb169-4"><a href="#cb169-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb169-5"><a href="#cb169-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-115-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb170"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb170-1"><a href="#cb170-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb170-2"><a href="#cb170-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">19</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb170-3"><a href="#cb170-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb170-4"><a href="#cb170-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb170-5"><a href="#cb170-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-116-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb171"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb171-1"><a href="#cb171-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb171-2"><a href="#cb171-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">5</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb171-3"><a href="#cb171-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb171-4"><a href="#cb171-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb171-5"><a href="#cb171-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-117-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb172"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb172-1"><a href="#cb172-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb172-2"><a href="#cb172-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">15</span>) <span class="sc">+</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">5</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb172-3"><a href="#cb172-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb172-4"><a href="#cb172-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb172-5"><a href="#cb172-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-118-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb173"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb173-1"><a href="#cb173-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">15</span>) <span class="sc">+</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">6665</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb173-3"><a href="#cb173-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb173-4"><a href="#cb173-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb173-5"><a href="#cb173-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-119-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb174"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb174-1"><a href="#cb174-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb174-2"><a href="#cb174-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">15</span>) <span class="sc">+</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">15</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb174-3"><a href="#cb174-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb174-4"><a href="#cb174-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb174-5"><a href="#cb174-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-120-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb175"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb175-1"><a href="#cb175-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb175-2"><a href="#cb175-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">15</span>) <span class="sc">+</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">15</span>),</span>
+<span id="cb175-3"><a href="#cb175-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">robust =</span> <span class="cn">TRUE</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb175-4"><a href="#cb175-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb175-5"><a href="#cb175-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb175-6"><a href="#cb175-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"STL decomposition: US retail employment"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-121-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb176"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb176-1"><a href="#cb176-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb176-2"><a href="#cb176-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">5</span>))) <span class="sc">|&gt;</span> </span>
+<span id="cb176-3"><a href="#cb176-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A dable: 357 x 7 [1M]
+# Key:     .model [1]
+# :        Employed = trend + season_year + remainder
+   .model              Month Employed  trend season_year remainder season_adjust
+   &lt;chr&gt;               &lt;mth&gt;    &lt;dbl&gt;  &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;
+ 1 STL(Employed … 1990 janv.   13256. 13294.       -2.16    -36.2         13258.
+ 2 STL(Employed … 1990 févr.   12966. 13273.     -260.      -47.3         13226.
+ 3 STL(Employed …  1990 mars   12938. 13252.     -289.      -25.1         13227.
+ 4 STL(Employed …  1990 avr.   13012. 13231.     -221.        2.25        13233.
+ 5 STL(Employed …   1990 mai   13108. 13209.     -111.        9.96        13219.
+ 6 STL(Employed …  1990 juin   13183. 13188.      -18.8      14.1         13202.
+ 7 STL(Employed … 1990 juil.   13170. 13166.      -17.9      22.1         13188.
+ 8 STL(Employed …  1990 août   13160. 13144.       -2.53     18.1         13162.
+ 9 STL(Employed … 1990 sept.   13113. 13122.      -34.0      25.3         13147.
+10 STL(Employed …  1990 oct.   13185. 13100.       54.3      30.7         13131.
+# ℹ 347 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb178"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb178-1"><a href="#cb178-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb178-2"><a href="#cb178-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(</span>
+<span id="cb178-3"><a href="#cb178-3" aria-hidden="true" tabindex="-1"></a>    Employed <span class="sc">~</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">15</span>) <span class="sc">+</span> </span>
+<span id="cb178-4"><a href="#cb178-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">season</span>(<span class="at">window =</span> <span class="st">"periodic"</span>),</span>
+<span id="cb178-5"><a href="#cb178-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">robust =</span> <span class="cn">TRUE</span></span>
+<span id="cb178-6"><a href="#cb178-6" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|&gt;</span> </span>
+<span id="cb178-7"><a href="#cb178-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A dable: 357 x 7 [1M]
+# Key:     .model [1]
+# :        Employed = trend + season_year + remainder
+   .model              Month Employed  trend season_year remainder season_adjust
+   &lt;chr&gt;               &lt;mth&gt;    &lt;dbl&gt;  &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;
+ 1 "STL(Employed… 1990 janv.   13256. 13247.      -80.8      89.9         13337.
+ 2 "STL(Employed… 1990 févr.   12966. 13235.     -273.        4.72        13240.
+ 3 "STL(Employed…  1990 mars   12938. 13223.     -258.      -26.5         13197.
+ 4 "STL(Employed…  1990 avr.   13012. 13211.     -186.      -12.6         13198.
+ 5 "STL(Employed…   1990 mai   13108. 13198.      -88.4      -1.74        13197.
+ 6 "STL(Employed…  1990 juin   13183. 13186.       -8.47      5.67        13191.
+ 7 "STL(Employed… 1990 juil.   13170. 13173.      -10.9       8.17        13181.
+ 8 "STL(Employed…  1990 août   13160. 13157.      -11.5      13.5         13171.
+ 9 "STL(Employed… 1990 sept.   13113. 13142.      -88.0      59.2         13201.
+10 "STL(Employed…  1990 oct.   13185. 13116.       39.0      29.8         13146.
+# ℹ 347 more rows</code></pre>
+</div>
+</div>
+<ul>
+<li><p><code>trend(window = ?)</code> controls wiggliness of trend component</p></li>
+<li><p><code>season(window = ?)</code> controls variation on seasonal component</p></li>
+<li><p><code>season(window = 'periodic')</code> is equivalent to an infinite window</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb180"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb180-1"><a href="#cb180-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb180-2"><a href="#cb180-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed)) <span class="sc">|&gt;</span> </span>
+<span id="cb180-3"><a href="#cb180-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb180-4"><a href="#cb180-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-123-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<ul>
+<li><p><code>STL()</code> chooses <code>season(window=13)</code> by default</p></li>
+<li><p>Can include transformations</p></li>
+</ul>
+<p><strong>STL decomposition</strong></p>
+<ul>
+<li><p>Algorithm that updates trend and seasonal components iteratively</p></li>
+<li><p>Starts with <span class="math inline">\(\hat{T_t}=0\)</span></p></li>
+<li><p>Uses a mixture of loess and moving averages to successively refine the trend and seasonal estimates</p></li>
+<li><p>The trend window controls loess bandwidth applied to deseasonalised values</p></li>
+<li><p>The season window controls loess bandwidth applied to detrended subseries</p></li>
+<li><p>Robustness weights based on remainder</p></li>
+<li><p>Default season: <code>window=13</code></p></li>
+<li><p>Default trend: <code>window=nextodd(ceiling((1.5*period)/(1-(1.5/s.window)))</code></p></li>
+</ul>
+</section>
+</section>
+<section id="chapter-4---time-series-features" class="level1">
+<h1>Chapter 4 - Time series features</h1>
+<section id="some-simple-statistics" class="level2">
+<h2 class="anchored" data-anchor-id="some-simple-statistics">4.1 Some simple statistics</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb181"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a>tourism <span class="sc">|&gt;</span> </span>
+<span id="cb181-2"><a href="#cb181-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(Trips, <span class="fu">list</span>(<span class="at">mean =</span> mean)) <span class="sc">|&gt;</span> </span>
+<span id="cb181-3"><a href="#cb181-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(mean)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 304 × 4
+   Region          State              Purpose   mean
+   &lt;chr&gt;           &lt;chr&gt;              &lt;chr&gt;    &lt;dbl&gt;
+ 1 Kangaroo Island South Australia    Other    0.340
+ 2 MacDonnell      Northern Territory Other    0.449
+ 3 Wilderness West Tasmania           Other    0.478
+ 4 Barkly          Northern Territory Other    0.632
+ 5 Clare Valley    South Australia    Other    0.898
+ 6 Barossa         South Australia    Other    1.02 
+ 7 Kakadu Arnhem   Northern Territory Other    1.04 
+ 8 Lasseter        Northern Territory Other    1.14 
+ 9 Wimmera         Victoria           Other    1.15 
+10 MacDonnell      Northern Territory Visiting 1.18 
+# ℹ 294 more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb183"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a>tourism <span class="sc">|&gt;</span> </span>
+<span id="cb183-2"><a href="#cb183-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(Trips, quantile)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 304 × 8
+   Region         State             Purpose    `0%`  `25%`   `50%`  `75%` `100%`
+   &lt;chr&gt;          &lt;chr&gt;             &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+ 1 Adelaide       South Australia   Busine…  68.7   134.   153.    177.   242.  
+ 2 Adelaide       South Australia   Holiday 108.    135.   154.    172.   224.  
+ 3 Adelaide       South Australia   Other    25.9    43.9   53.8    62.5  107.  
+ 4 Adelaide       South Australia   Visiti… 137.    179.   206.    229.   270.  
+ 5 Adelaide Hills South Australia   Busine…   0       0      1.26    3.92  28.6 
+ 6 Adelaide Hills South Australia   Holiday   0       5.77   8.52   14.1   35.8 
+ 7 Adelaide Hills South Australia   Other     0       0      0.908   2.09   8.95
+ 8 Adelaide Hills South Australia   Visiti…   0.778   8.91  12.2    16.8   81.1 
+ 9 Alice Springs  Northern Territo… Busine…   1.01    9.13  13.3    18.5   34.1 
+10 Alice Springs  Northern Territo… Holiday   2.81   16.9   31.5    44.8   76.5 
+# ℹ 294 more rows</code></pre>
+</div>
+</div>
+</section>
+<section id="acf-features" class="level2">
+<h2 class="anchored" data-anchor-id="acf-features">4.2 ACF features</h2>
+<ul>
+<li><p>The sum of the first ten squared autocorrelation coefficients is a useful summary of how much autocorrelation there is in a series, regardless of lag.</p></li>
+<li><p>We can also compute autocorrelations of the changes in the series between periods: we “difference” the data and create a new time series consisting of the differences between consecutive observations. Then we can compute the autocorrelations of this new differenced series.</p></li>
+</ul>
+<p>The <code>feat_acf()</code> function computes a selection of autocorrelations:</p>
+<ul>
+<li><p>the first autocorrelation coefficient from the original data</p></li>
+<li><p>the sum of squares of the first ten autocorrelation coefficients from the original data</p></li>
+<li><p>the first autocorrelation coefficient from the differenced data</p></li>
+<li><p>the sum of squares of the first ten autocorrelation coefficients from the differenced data</p></li>
+<li><p>the first autocorrelation coefficient from the twice differenced data</p></li>
+<li><p>the sum of squares of the first ten autocorrelation coefficients from the twice differenced data</p></li>
+<li><p>for seasonal data, the autocorrelation coefficient at the first seasonal lag is also returned</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb185"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a>tourism <span class="sc">|&gt;</span> <span class="fu">features</span>(Trips, feat_acf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 304 × 10
+   Region         State Purpose     acf1 acf10 diff1_acf1 diff1_acf10 diff2_acf1
+   &lt;chr&gt;          &lt;chr&gt; &lt;chr&gt;      &lt;dbl&gt; &lt;dbl&gt;      &lt;dbl&gt;       &lt;dbl&gt;      &lt;dbl&gt;
+ 1 Adelaide       Sout… Busine…  0.0333  0.131     -0.520       0.463     -0.676
+ 2 Adelaide       Sout… Holiday  0.0456  0.372     -0.343       0.614     -0.487
+ 3 Adelaide       Sout… Other    0.517   1.15      -0.409       0.383     -0.675
+ 4 Adelaide       Sout… Visiti…  0.0684  0.294     -0.394       0.452     -0.518
+ 5 Adelaide Hills Sout… Busine…  0.0709  0.134     -0.580       0.415     -0.750
+ 6 Adelaide Hills Sout… Holiday  0.131   0.313     -0.536       0.500     -0.716
+ 7 Adelaide Hills Sout… Other    0.261   0.330     -0.253       0.317     -0.457
+ 8 Adelaide Hills Sout… Visiti…  0.139   0.117     -0.472       0.239     -0.626
+ 9 Alice Springs  Nort… Busine…  0.217   0.367     -0.500       0.381     -0.658
+10 Alice Springs  Nort… Holiday -0.00660 2.11      -0.153       2.11      -0.274
+# ℹ 294 more rows
+# ℹ 2 more variables: diff2_acf10 &lt;dbl&gt;, season_acf1 &lt;dbl&gt;</code></pre>
+</div>
+</div>
+</section>
+<section id="stl-features" class="level2">
+<h2 class="anchored" data-anchor-id="stl-features">4.3 STL features</h2>
+<p>The decomposition is written as</p>
+<p><span class="math display">\[
+y_t=T_t+S_t+R_t
+\]</span></p>
+<p>For strongly trended data, the seasonally adjusted data should have much more variation than the remainder component. Therefore, <span class="math inline">\(Var(R_t)/(Var(T_t+S_t)\)</span> should be relatively small.</p>
+<p>But for data with little or no trend, the two variances should be approximately the same. So we define the strength of trend as:</p>
+<p><span class="math display">\[
+F_T=max(0,1-\frac{Var(R_t)}{Var(T_t+S_t})
+\]</span></p>
+<p>The strength of seasonality is defined similarly, but with respect to the detrended data rather than the seasonally adjusted data:</p>
+<p><span class="math display">\[
+F_S=max(0,1-\frac{Var(R_t)}{Var(S_t+R_t}
+\]</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb187"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a>tourism <span class="sc">|&gt;</span> </span>
+<span id="cb187-2"><a href="#cb187-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(Trips, feat_stl)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 304 × 12
+   Region State Purpose trend_strength seasonal_strength_year seasonal_peak_year
+   &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;            &lt;dbl&gt;                  &lt;dbl&gt;              &lt;dbl&gt;
+ 1 Adela… Sout… Busine…          0.464                  0.407                  3
+ 2 Adela… Sout… Holiday          0.554                  0.619                  1
+ 3 Adela… Sout… Other            0.746                  0.202                  2
+ 4 Adela… Sout… Visiti…          0.435                  0.452                  1
+ 5 Adela… Sout… Busine…          0.464                  0.179                  3
+ 6 Adela… Sout… Holiday          0.528                  0.296                  2
+ 7 Adela… Sout… Other            0.593                  0.404                  2
+ 8 Adela… Sout… Visiti…          0.488                  0.254                  0
+ 9 Alice… Nort… Busine…          0.534                  0.251                  0
+10 Alice… Nort… Holiday          0.381                  0.832                  3
+# ℹ 294 more rows
+# ℹ 6 more variables: seasonal_trough_year &lt;dbl&gt;, spikiness &lt;dbl&gt;,
+#   linearity &lt;dbl&gt;, curvature &lt;dbl&gt;, stl_e_acf1 &lt;dbl&gt;, stl_e_acf10 &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb189"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a>tourism <span class="sc">|&gt;</span></span>
+<span id="cb189-2"><a href="#cb189-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(Trips, feat_stl) <span class="sc">|&gt;</span></span>
+<span id="cb189-3"><a href="#cb189-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> trend_strength, <span class="at">y =</span> seasonal_strength_year,</span>
+<span id="cb189-4"><a href="#cb189-4" aria-hidden="true" tabindex="-1"></a>             <span class="at">col =</span> Purpose)) <span class="sc">+</span></span>
+<span id="cb189-5"><a href="#cb189-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb189-6"><a href="#cb189-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="fu">vars</span>(State))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-128-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb190"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb190-1"><a href="#cb190-1" aria-hidden="true" tabindex="-1"></a>tourism <span class="sc">|&gt;</span></span>
+<span id="cb190-2"><a href="#cb190-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(Trips, feat_stl) <span class="sc">|&gt;</span></span>
+<span id="cb190-3"><a href="#cb190-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb190-4"><a href="#cb190-4" aria-hidden="true" tabindex="-1"></a>    seasonal_strength_year <span class="sc">==</span> <span class="fu">max</span>(seasonal_strength_year)</span>
+<span id="cb190-5"><a href="#cb190-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb190-6"><a href="#cb190-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(tourism, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"State"</span>, <span class="st">"Region"</span>, <span class="st">"Purpose"</span>), <span class="at">multiple =</span> <span class="st">"all"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb190-7"><a href="#cb190-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> Quarter, <span class="at">y =</span> Trips)) <span class="sc">+</span></span>
+<span id="cb190-8"><a href="#cb190-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb190-9"><a href="#cb190-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(<span class="fu">vars</span>(State, Region, Purpose))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-129-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="other-features" class="level2">
+<h2 class="anchored" data-anchor-id="other-features">4.4 Other features</h2>
+<p>In the <code>feasts</code> package: <code>coef_hurst</code>, <code>feat_spectral</code>, <code>box_pierce</code>, …</p>
+</section>
+<section id="exploring-australian-tourism-data" class="level2">
+<h2 class="anchored" data-anchor-id="exploring-australian-tourism-data">4.5 Exploring Australian tourism data</h2>
+<p>All of the features included in the <code>feasts</code> package can be computed in one line:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb191"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb191-1"><a href="#cb191-1" aria-hidden="true" tabindex="-1"></a>tourism_features <span class="ot">&lt;-</span> tourism <span class="sc">|&gt;</span> </span>
+<span id="cb191-2"><a href="#cb191-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(Trips, <span class="fu">feature_set</span>(<span class="at">pkgs =</span> <span class="st">"feasts"</span>))</span>
+<span id="cb191-3"><a href="#cb191-3" aria-hidden="true" tabindex="-1"></a>tourism_features</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 304 × 51
+   Region State Purpose trend_strength seasonal_strength_year seasonal_peak_year
+   &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;            &lt;dbl&gt;                  &lt;dbl&gt;              &lt;dbl&gt;
+ 1 Adela… Sout… Busine…          0.464                  0.407                  3
+ 2 Adela… Sout… Holiday          0.554                  0.619                  1
+ 3 Adela… Sout… Other            0.746                  0.202                  2
+ 4 Adela… Sout… Visiti…          0.435                  0.452                  1
+ 5 Adela… Sout… Busine…          0.464                  0.179                  3
+ 6 Adela… Sout… Holiday          0.528                  0.296                  2
+ 7 Adela… Sout… Other            0.593                  0.404                  2
+ 8 Adela… Sout… Visiti…          0.488                  0.254                  0
+ 9 Alice… Nort… Busine…          0.534                  0.251                  0
+10 Alice… Nort… Holiday          0.381                  0.832                  3
+# ℹ 294 more rows
+# ℹ 45 more variables: seasonal_trough_year &lt;dbl&gt;, spikiness &lt;dbl&gt;,
+#   linearity &lt;dbl&gt;, curvature &lt;dbl&gt;, stl_e_acf1 &lt;dbl&gt;, stl_e_acf10 &lt;dbl&gt;,
+#   acf1 &lt;dbl&gt;, acf10 &lt;dbl&gt;, diff1_acf1 &lt;dbl&gt;, diff1_acf10 &lt;dbl&gt;,
+#   diff2_acf1 &lt;dbl&gt;, diff2_acf10 &lt;dbl&gt;, season_acf1 &lt;dbl&gt;, pacf5 &lt;dbl&gt;,
+#   diff1_pacf5 &lt;dbl&gt;, diff2_pacf5 &lt;dbl&gt;, season_pacf &lt;dbl&gt;,
+#   zero_run_mean &lt;dbl&gt;, nonzero_squared_cv &lt;dbl&gt;, zero_start_prop &lt;dbl&gt;, …</code></pre>
+</div>
+</div>
+<p>This gives 48 features for every combination of the three key variables (<code>Region</code>, <code>State</code> and <code>Purpose</code>).</p>
+<p>We can do pairwise plots of groups of features:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb193"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb193-1"><a href="#cb193-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glue)</span>
+<span id="cb193-2"><a href="#cb193-2" aria-hidden="true" tabindex="-1"></a>tourism_features <span class="sc">|&gt;</span></span>
+<span id="cb193-3"><a href="#cb193-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select_at</span>(<span class="fu">vars</span>(<span class="fu">contains</span>(<span class="st">"season"</span>), Purpose)) <span class="sc">|&gt;</span></span>
+<span id="cb193-4"><a href="#cb193-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb193-5"><a href="#cb193-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">seasonal_peak_year =</span> seasonal_peak_year <span class="sc">+</span></span>
+<span id="cb193-6"><a href="#cb193-6" aria-hidden="true" tabindex="-1"></a>      <span class="dv">4</span><span class="sc">*</span>(seasonal_peak_year<span class="sc">==</span><span class="dv">0</span>),</span>
+<span id="cb193-7"><a href="#cb193-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">seasonal_trough_year =</span> seasonal_trough_year <span class="sc">+</span></span>
+<span id="cb193-8"><a href="#cb193-8" aria-hidden="true" tabindex="-1"></a>      <span class="dv">4</span><span class="sc">*</span>(seasonal_trough_year<span class="sc">==</span><span class="dv">0</span>),</span>
+<span id="cb193-9"><a href="#cb193-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">seasonal_peak_year =</span> <span class="fu">glue</span>(<span class="st">"Q{seasonal_peak_year}"</span>),</span>
+<span id="cb193-10"><a href="#cb193-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">seasonal_trough_year =</span> <span class="fu">glue</span>(<span class="st">"Q{seasonal_trough_year}"</span>),</span>
+<span id="cb193-11"><a href="#cb193-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb193-12"><a href="#cb193-12" aria-hidden="true" tabindex="-1"></a>  GGally<span class="sc">::</span><span class="fu">ggpairs</span>(<span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">colour =</span> Purpose))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-131-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can compute the principal components of the tourism features:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb195"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb195-1"><a href="#cb195-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom)</span>
+<span id="cb195-2"><a href="#cb195-2" aria-hidden="true" tabindex="-1"></a>pcs <span class="ot">&lt;-</span> tourism_features <span class="sc">|&gt;</span></span>
+<span id="cb195-3"><a href="#cb195-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>State, <span class="sc">-</span>Region, <span class="sc">-</span>Purpose) <span class="sc">|&gt;</span></span>
+<span id="cb195-4"><a href="#cb195-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prcomp</span>(<span class="at">scale =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb195-5"><a href="#cb195-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">augment</span>(tourism_features)</span>
+<span id="cb195-6"><a href="#cb195-6" aria-hidden="true" tabindex="-1"></a>pcs <span class="sc">|&gt;</span></span>
+<span id="cb195-7"><a href="#cb195-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> .fittedPC1, <span class="at">y =</span> .fittedPC2, <span class="at">col =</span> Purpose)) <span class="sc">+</span></span>
+<span id="cb195-8"><a href="#cb195-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb195-9"><a href="#cb195-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">aspect.ratio =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-132-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb196"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb196-1"><a href="#cb196-1" aria-hidden="true" tabindex="-1"></a>outliers <span class="ot">&lt;-</span> pcs <span class="sc">|&gt;</span></span>
+<span id="cb196-2"><a href="#cb196-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(.fittedPC1 <span class="sc">&gt;</span> <span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb196-3"><a href="#cb196-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Region, State, Purpose, .fittedPC1, .fittedPC2)</span>
+<span id="cb196-4"><a href="#cb196-4" aria-hidden="true" tabindex="-1"></a>outliers</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 5
+  Region                 State             Purpose  .fittedPC1 .fittedPC2
+  &lt;chr&gt;                  &lt;chr&gt;             &lt;chr&gt;         &lt;dbl&gt;      &lt;dbl&gt;
+1 Australia's North West Western Australia Business       13.4    -11.3  
+2 Australia's South West Western Australia Holiday        10.9      0.880
+3 Melbourne              Victoria          Holiday        12.3    -10.4  
+4 South Coast            New South Wales   Holiday        11.9      9.42 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb198"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb198-1"><a href="#cb198-1" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 4 × 5</span></span>
+<span id="cb198-2"><a href="#cb198-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   Region                 State             Purpose  .fittedPC1 .fittedPC2</span></span>
+<span id="cb198-3"><a href="#cb198-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;                  &lt;chr&gt;             &lt;chr&gt;         &lt;dbl&gt;      &lt;dbl&gt;</span></span>
+<span id="cb198-4"><a href="#cb198-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 Australia's North West Western Australia Business       13.4    -11.3  </span></span>
+<span id="cb198-5"><a href="#cb198-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 Australia's South West Western Australia Holiday        10.9      0.880</span></span>
+<span id="cb198-6"><a href="#cb198-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 Melbourne              Victoria          Holiday        12.3    -10.4  </span></span>
+<span id="cb198-7"><a href="#cb198-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 South Coast            New South Wales   Holiday        11.9      9.42</span></span>
+<span id="cb198-8"><a href="#cb198-8" aria-hidden="true" tabindex="-1"></a>outliers <span class="sc">|&gt;</span></span>
+<span id="cb198-9"><a href="#cb198-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(tourism, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"State"</span>, <span class="st">"Region"</span>, <span class="st">"Purpose"</span>), <span class="at">multiple =</span> <span class="st">"all"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb198-10"><a href="#cb198-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Series =</span> <span class="fu">glue</span>(<span class="st">"{State}"</span>, <span class="st">"{Region}"</span>, <span class="st">"{Purpose}"</span>, <span class="at">.sep =</span> <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb198-11"><a href="#cb198-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> Quarter, <span class="at">y =</span> Trips)) <span class="sc">+</span></span>
+<span id="cb198-12"><a href="#cb198-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb198-13"><a href="#cb198-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(Series <span class="sc">~</span> ., <span class="at">scales =</span> <span class="st">"free"</span>) <span class="sc">+</span></span>
+<span id="cb198-14"><a href="#cb198-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Outlying time series in PC space"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-133-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="chapter-5---the-forecasters-toolbox" class="level1">
+<h1>Chapter 5 - The forecaster’s toolbox</h1>
+<section id="a-tidy-forecasting-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="a-tidy-forecasting-workflow">5.1 A tidy forecasting workflow</h2>
+<p>The process of producing forecasts can be split up into a few fundamental steps:</p>
+<ol type="1">
+<li>Preparing data - generate a <code>tsibble</code></li>
+<li>Data visualisation</li>
+<li>Specifying a model</li>
+<li>Model estimation - <code>model()</code> -&gt; <code>mable</code></li>
+<li>Accuracy &amp; performance evaluation</li>
+<li>Producing forecasts - <code>forecast()</code> -&gt; <code>fable</code></li>
+</ol>
+<p><img src="images/clipboard-1016832891.png" class="img-fluid"></p>
+<p><strong>Data preparation (tidy)</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb199"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb199-1"><a href="#cb199-1" aria-hidden="true" tabindex="-1"></a>gdppc <span class="ot">&lt;-</span> global_economy <span class="sc">|&gt;</span> </span>
+<span id="cb199-2"><a href="#cb199-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">GDP_per_capita =</span> GDP <span class="sc">/</span> Population) <span class="sc">|&gt;</span> </span>
+<span id="cb199-3"><a href="#cb199-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Year, Country, GDP, Population, GDP_per_capita)</span>
+<span id="cb199-4"><a href="#cb199-4" aria-hidden="true" tabindex="-1"></a>gdppc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 15,150 x 5 [1Y]
+# Key:       Country [263]
+    Year Country             GDP Population GDP_per_capita
+   &lt;dbl&gt; &lt;fct&gt;             &lt;dbl&gt;      &lt;dbl&gt;          &lt;dbl&gt;
+ 1  1960 Afghanistan  537777811.    8996351           59.8
+ 2  1961 Afghanistan  548888896.    9166764           59.9
+ 3  1962 Afghanistan  546666678.    9345868           58.5
+ 4  1963 Afghanistan  751111191.    9533954           78.8
+ 5  1964 Afghanistan  800000044.    9731361           82.2
+ 6  1965 Afghanistan 1006666638.    9938414          101. 
+ 7  1966 Afghanistan 1399999967.   10152331          138. 
+ 8  1967 Afghanistan 1673333418.   10372630          161. 
+ 9  1968 Afghanistan 1373333367.   10604346          130. 
+10  1969 Afghanistan 1408888922.   10854428          130. 
+# ℹ 15,140 more rows</code></pre>
+</div>
+</div>
+<p><strong>Visualise</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb201"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb201-1"><a href="#cb201-1" aria-hidden="true" tabindex="-1"></a>gdppc <span class="sc">|&gt;</span> </span>
+<span id="cb201-2"><a href="#cb201-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Country <span class="sc">==</span> <span class="st">"Sweden"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb201-3"><a href="#cb201-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(GDP_per_capita) <span class="sc">+</span></span>
+<span id="cb201-4"><a href="#cb201-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"GDP per capita for Sweden"</span>,</span>
+<span id="cb201-5"><a href="#cb201-5" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"$US"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-135-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Specify a model</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb202"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb202-1"><a href="#cb202-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> gdppc <span class="sc">|&gt;</span> </span>
+<span id="cb202-2"><a href="#cb202-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">trend_model =</span> <span class="fu">TSLM</span>(GDP_per_capita <span class="sc">~</span> <span class="fu">trend</span>()))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: 7 errors (1 unique) encountered for trend_model
+[7] aucun cas ne contient autre chose que des valeurs manquantes (NA)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb204"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb204-1"><a href="#cb204-1" aria-hidden="true" tabindex="-1"></a>fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 263 x 2
+# Key:     Country [263]
+   Country             trend_model
+   &lt;fct&gt;                   &lt;model&gt;
+ 1 Afghanistan              &lt;TSLM&gt;
+ 2 Albania                  &lt;TSLM&gt;
+ 3 Algeria                  &lt;TSLM&gt;
+ 4 American Samoa           &lt;TSLM&gt;
+ 5 Andorra                  &lt;TSLM&gt;
+ 6 Angola                   &lt;TSLM&gt;
+ 7 Antigua and Barbuda      &lt;TSLM&gt;
+ 8 Arab World               &lt;TSLM&gt;
+ 9 Argentina                &lt;TSLM&gt;
+10 Armenia                  &lt;TSLM&gt;
+# ℹ 253 more rows</code></pre>
+</div>
+</div>
+<p>A <code>mable</code> is a model table, each cell corresponds to a fitted model.</p>
+<p><strong>Evaluate the model</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb206"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb206-1"><a href="#cb206-1" aria-hidden="true" tabindex="-1"></a>fit <span class="sc">|&gt;</span> </span>
+<span id="cb206-2"><a href="#cb206-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"3 years"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A fable: 789 x 5 [1Y]
+# Key:     Country, .model [263]
+   Country        .model       Year
+   &lt;fct&gt;          &lt;chr&gt;       &lt;dbl&gt;
+ 1 Afghanistan    trend_model  2018
+ 2 Afghanistan    trend_model  2019
+ 3 Afghanistan    trend_model  2020
+ 4 Albania        trend_model  2018
+ 5 Albania        trend_model  2019
+ 6 Albania        trend_model  2020
+ 7 Algeria        trend_model  2018
+ 8 Algeria        trend_model  2019
+ 9 Algeria        trend_model  2020
+10 American Samoa trend_model  2018
+# ℹ 779 more rows
+# ℹ 2 more variables: GDP_per_capita &lt;dist&gt;, .mean &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p>A <code>fable</code> is a forecast table with point forecasts and distributions.</p>
+<p><strong>Visualising forecasts</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb208"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb208-1"><a href="#cb208-1" aria-hidden="true" tabindex="-1"></a>fit <span class="sc">|&gt;</span> </span>
+<span id="cb208-2"><a href="#cb208-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"3 years"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb208-3"><a href="#cb208-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Country <span class="sc">==</span> <span class="st">"Sweden"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb208-4"><a href="#cb208-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(gdppc) <span class="sc">+</span></span>
+<span id="cb208-5"><a href="#cb208-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"GDP per capita for Sweden"</span>,</span>
+<span id="cb208-6"><a href="#cb208-6" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"$US"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-138-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="some-simple-forecasting-methods" class="level2">
+<h2 class="anchored" data-anchor-id="some-simple-forecasting-methods">5.2 Some simple forecasting methods</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb209"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb209-1"><a href="#cb209-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span> </span>
+<span id="cb209-2"><a href="#cb209-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter_index</span>(<span class="st">"1970 Q1"</span> <span class="sc">~</span> <span class="st">"2004 Q1"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb209-3"><a href="#cb209-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Bricks)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Mean method</strong></p>
+<ul>
+<li><p>Forecast of all future values is equal to mean of historical data <span class="math inline">\(\{y_t,...,y_T\}\)</span></p></li>
+<li><p>Forecasts: <span class="math inline">\(\hat{y}_{T+h|T}=\bar{y}=(y_1+...+y_T)/T\)</span></p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb210"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb210-1"><a href="#cb210-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span> </span>
+<span id="cb210-2"><a href="#cb210-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">MEAN</span>(Bricks))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 1 x 1
+  `MEAN(Bricks)`
+         &lt;model&gt;
+1         &lt;MEAN&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb212"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb212-1"><a href="#cb212-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span></span>
+<span id="cb212-2"><a href="#cb212-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span></span>
+<span id="cb212-3"><a href="#cb212-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">average =</span> <span class="fu">mean</span>(Bricks))</span>
+<span id="cb212-4"><a href="#cb212-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb212-5"><a href="#cb212-5" aria-hidden="true" tabindex="-1"></a>fc <span class="ot">&lt;-</span> bricks <span class="sc">|&gt;</span></span>
+<span id="cb212-6"><a href="#cb212-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">row_number</span>() <span class="sc">==</span> <span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb212-7"><a href="#cb212-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb212-8"><a href="#cb212-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="at">Quarter =</span> <span class="fu">list</span>(<span class="fu">as.Date</span>(Quarter) <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">12</span> <span class="sc">*</span> <span class="dv">5</span>))))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: `unnest()` has a new interface. See `?unnest` for details.
+ℹ Try `df %&gt;% unnest(c(Quarter))`, with `mutate()` if needed.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb214"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb214-1"><a href="#cb214-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span></span>
+<span id="cb214-2"><a href="#cb214-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> Quarter, <span class="at">y =</span> Bricks)) <span class="sc">+</span></span>
+<span id="cb214-3"><a href="#cb214-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb214-4"><a href="#cb214-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> average), <span class="at">colour =</span> <span class="st">"#0072B2"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb214-5"><a href="#cb214-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> average), <span class="at">data =</span> fc, <span class="at">colour =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
+<span id="cb214-6"><a href="#cb214-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Clay brick production in Australia"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-141-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Naïve method</strong></p>
+<ul>
+<li><p>Forecasts equal to last observed value</p></li>
+<li><p>Forecasts: <span class="math inline">\(\hat{y}_{T+h|T}=y_T\)</span></p></li>
+<li><p>Consequence of efficient market hypothesis</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb215"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb215-1"><a href="#cb215-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span> <span class="fu">model</span>(<span class="fu">NAIVE</span>(Bricks))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 1 x 1
+  `NAIVE(Bricks)`
+          &lt;model&gt;
+1         &lt;NAIVE&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb217"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb217-1"><a href="#cb217-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span></span>
+<span id="cb217-2"><a href="#cb217-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span></span>
+<span id="cb217-3"><a href="#cb217-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">NAIVE</span>(Bricks)) <span class="sc">|&gt;</span></span>
+<span id="cb217-4"><a href="#cb217-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb217-5"><a href="#cb217-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="fu">filter</span>(bricks, <span class="fu">year</span>(Quarter) <span class="sc">&gt;</span> <span class="dv">1990</span>), <span class="at">level =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb217-6"><a href="#cb217-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> <span class="fu">slice</span>(bricks, <span class="fu">n</span>()), <span class="fu">aes</span>(<span class="at">y =</span> Bricks), <span class="at">colour =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
+<span id="cb217-7"><a href="#cb217-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Clay brick production in Australia"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-143-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Seasonal naïve method</strong></p>
+<ul>
+<li><p>Forecasts equal to last value from same season</p></li>
+<li><p>Forecasts: <span class="math inline">\(\hat{y}_{T+h|T}=y_{T+h-m(k+1)}\)</span> where <span class="math inline">\(m\)</span> = seasonal period and <span class="math inline">\(k\)</span> is the integer part of <span class="math inline">\((h-1)/m\)</span></p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb218"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb218-1"><a href="#cb218-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span> <span class="fu">model</span>(<span class="fu">SNAIVE</span>(Bricks <span class="sc">~</span> <span class="fu">lag</span>(<span class="st">"year"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 1 x 1
+  `SNAIVE(Bricks ~ lag("year"))`
+                         &lt;model&gt;
+1                       &lt;SNAIVE&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb220"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb220-1"><a href="#cb220-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span></span>
+<span id="cb220-2"><a href="#cb220-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">SNAIVE</span>(Bricks <span class="sc">~</span> <span class="fu">lag</span>(<span class="st">"year"</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb220-3"><a href="#cb220-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb220-4"><a href="#cb220-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="fu">filter</span>(bricks, <span class="fu">year</span>(Quarter) <span class="sc">&gt;</span> <span class="dv">1990</span>), <span class="at">level =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb220-5"><a href="#cb220-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> <span class="fu">slice</span>(bricks, (<span class="fu">n</span>() <span class="sc">-</span> <span class="dv">3</span>)<span class="sc">:</span><span class="fu">n</span>()), <span class="fu">aes</span>(<span class="at">y =</span> Bricks), <span class="at">colour =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
+<span id="cb220-6"><a href="#cb220-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Clay brick production in Australia"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-145-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>RW: drift method</strong></p>
+<p>RW: Random Walk</p>
+<ul>
+<li><p>Forecasts equal to last value plus average change</p></li>
+<li><p>Forecasts:</p></li>
+</ul>
+<p><span class="math display">\[
+\hat{y}_{T+h|T}=y_T+\frac{h}{T-1}\sum_{t=2}^T(y_t-y_{t-1})=y_T+\frac{h}{T-1}(y_T-y_1)
+\]</span></p>
+<ul>
+<li>Equivalent to extrapolating a line drawn between first and last observations</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb221"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb221-1"><a href="#cb221-1" aria-hidden="true" tabindex="-1"></a>bricks <span class="sc">|&gt;</span> <span class="fu">model</span>(<span class="fu">RW</span>(Bricks <span class="sc">~</span> <span class="fu">drift</span>()))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 1 x 1
+  `RW(Bricks ~ drift())`
+                 &lt;model&gt;
+1          &lt;RW w/ drift&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb223"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb223-1"><a href="#cb223-1" aria-hidden="true" tabindex="-1"></a>aus_production <span class="sc">|&gt;</span></span>
+<span id="cb223-2"><a href="#cb223-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span></span>
+<span id="cb223-3"><a href="#cb223-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">RW</span>(Bricks <span class="sc">~</span> <span class="fu">drift</span>())) <span class="sc">|&gt;</span></span>
+<span id="cb223-4"><a href="#cb223-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb223-5"><a href="#cb223-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(aus_production, <span class="at">level =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb223-6"><a href="#cb223-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
+<span id="cb223-7"><a href="#cb223-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> <span class="fu">slice</span>(aus_production, <span class="fu">range</span>(<span class="fu">cumsum</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)))),</span>
+<span id="cb223-8"><a href="#cb223-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">y =</span> Bricks), <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">colour =</span> <span class="st">"#0072B2"</span></span>
+<span id="cb223-9"><a href="#cb223-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb223-10"><a href="#cb223-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Clay brick production in Australia"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 20 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-147-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Model fitting</strong></p>
+<p>The <code>model()</code> function trains models to data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb225"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb225-1"><a href="#cb225-1" aria-hidden="true" tabindex="-1"></a>brick_fit <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span> </span>
+<span id="cb225-2"><a href="#cb225-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb225-3"><a href="#cb225-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb225-4"><a href="#cb225-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Seasonal_naive =</span> <span class="fu">SNAIVE</span>(Bricks),</span>
+<span id="cb225-5"><a href="#cb225-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Naive =</span> <span class="fu">NAIVE</span>(Bricks),</span>
+<span id="cb225-6"><a href="#cb225-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Drift =</span> <span class="fu">RW</span>(Bricks <span class="sc">~</span> <span class="fu">drift</span>()),</span>
+<span id="cb225-7"><a href="#cb225-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean =</span> <span class="fu">MEAN</span>(Bricks)</span>
+<span id="cb225-8"><a href="#cb225-8" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb226"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb226-1"><a href="#cb226-1" aria-hidden="true" tabindex="-1"></a>brick_fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 1 x 4
+  Seasonal_naive   Naive         Drift    Mean
+         &lt;model&gt; &lt;model&gt;       &lt;model&gt; &lt;model&gt;
+1       &lt;SNAIVE&gt; &lt;NAIVE&gt; &lt;RW w/ drift&gt;  &lt;MEAN&gt;</code></pre>
+</div>
+</div>
+<p><strong>Producing forecasts</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb228"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb228-1"><a href="#cb228-1" aria-hidden="true" tabindex="-1"></a>brick_fc <span class="ot">&lt;-</span> brick_fit <span class="sc">|&gt;</span> </span>
+<span id="cb228-2"><a href="#cb228-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb229"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb229-1"><a href="#cb229-1" aria-hidden="true" tabindex="-1"></a>brick_fc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A fable: 80 x 4 [1Q]
+# Key:     .model [4]
+   .model         Quarter
+   &lt;chr&gt;            &lt;qtr&gt;
+ 1 Seasonal_naive 2005 Q3
+ 2 Seasonal_naive 2005 Q4
+ 3 Seasonal_naive 2006 Q1
+ 4 Seasonal_naive 2006 Q2
+ 5 Seasonal_naive 2006 Q3
+ 6 Seasonal_naive 2006 Q4
+ 7 Seasonal_naive 2007 Q1
+ 8 Seasonal_naive 2007 Q2
+ 9 Seasonal_naive 2007 Q3
+10 Seasonal_naive 2007 Q4
+# ℹ 70 more rows
+# ℹ 2 more variables: Bricks &lt;dist&gt;, .mean &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p><strong>Visualising forecasts</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb231"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb231-1"><a href="#cb231-1" aria-hidden="true" tabindex="-1"></a>brick_fc <span class="sc">|&gt;</span> </span>
+<span id="cb231-2"><a href="#cb231-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(aus_production, <span class="at">level =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb231-3"><a href="#cb231-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Clay brick production in Australia"</span>,</span>
+<span id="cb231-4"><a href="#cb231-4" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Millions of bricks"</span>) <span class="sc">+</span></span>
+<span id="cb231-5"><a href="#cb231-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"Forecast"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 20 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-152-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Facebook closing stock price</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb233"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb233-1"><a href="#cb233-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract training data</span></span>
+<span id="cb233-2"><a href="#cb233-2" aria-hidden="true" tabindex="-1"></a>fb_stock <span class="ot">&lt;-</span> gafa_stock <span class="sc">|&gt;</span> </span>
+<span id="cb233-3"><a href="#cb233-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Symbol <span class="sc">==</span> <span class="st">"FB"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb233-4"><a href="#cb233-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">trading_day =</span> <span class="fu">row_number</span>()) <span class="sc">|&gt;</span> </span>
+<span id="cb233-5"><a href="#cb233-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">update_tsibble</span>(<span class="at">index =</span> trading_day, <span class="at">regular =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb233-6"><a href="#cb233-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb233-7"><a href="#cb233-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Specify, estimate and forecast</span></span>
+<span id="cb233-8"><a href="#cb233-8" aria-hidden="true" tabindex="-1"></a>fb_stock <span class="sc">|&gt;</span> </span>
+<span id="cb233-9"><a href="#cb233-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb233-10"><a href="#cb233-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean =</span> <span class="fu">MEAN</span>(Close),</span>
+<span id="cb233-11"><a href="#cb233-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Naive =</span> <span class="fu">NAIVE</span>(Close),</span>
+<span id="cb233-12"><a href="#cb233-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">Drift =</span> <span class="fu">RW</span>(Close <span class="sc">~</span> <span class="fu">drift</span>())</span>
+<span id="cb233-13"><a href="#cb233-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb233-14"><a href="#cb233-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="dv">42</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb233-15"><a href="#cb233-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(fb_stock, <span class="at">level =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb233-16"><a href="#cb233-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Facebook closing stock price"</span>,</span>
+<span id="cb233-17"><a href="#cb233-17" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"$US"</span>) <span class="sc">+</span></span>
+<span id="cb233-18"><a href="#cb233-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"Forecast"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-153-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Australian quarterly beer production</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb234"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb234-1"><a href="#cb234-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set training data from 1992 to 2006</span></span>
+<span id="cb234-2"><a href="#cb234-2" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span></span>
+<span id="cb234-3"><a href="#cb234-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter_index</span>(<span class="st">"1992 Q1"</span> <span class="sc">~</span> <span class="st">"2006 Q4"</span>)</span>
+<span id="cb234-4"><a href="#cb234-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit the models</span></span>
+<span id="cb234-5"><a href="#cb234-5" aria-hidden="true" tabindex="-1"></a>beer_fit <span class="ot">&lt;-</span> train <span class="sc">|&gt;</span></span>
+<span id="cb234-6"><a href="#cb234-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb234-7"><a href="#cb234-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean =</span> <span class="fu">MEAN</span>(Beer),</span>
+<span id="cb234-8"><a href="#cb234-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Naïve</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">NAIVE</span>(Beer),</span>
+<span id="cb234-9"><a href="#cb234-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Seasonal naïve</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">SNAIVE</span>(Beer)</span>
+<span id="cb234-10"><a href="#cb234-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb234-11"><a href="#cb234-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate forecasts for 14 quarters</span></span>
+<span id="cb234-12"><a href="#cb234-12" aria-hidden="true" tabindex="-1"></a>beer_fc <span class="ot">&lt;-</span> beer_fit <span class="sc">|&gt;</span> <span class="fu">forecast</span>(<span class="at">h =</span> <span class="dv">14</span>)</span>
+<span id="cb234-13"><a href="#cb234-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot forecasts against actual values</span></span>
+<span id="cb234-14"><a href="#cb234-14" aria-hidden="true" tabindex="-1"></a>beer_fc <span class="sc">|&gt;</span></span>
+<span id="cb234-15"><a href="#cb234-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(train, <span class="at">level =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb234-16"><a href="#cb234-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autolayer</span>(</span>
+<span id="cb234-17"><a href="#cb234-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter_index</span>(aus_production, <span class="st">"2007 Q1"</span> <span class="sc">~</span> .),</span>
+<span id="cb234-18"><a href="#cb234-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">colour =</span> <span class="st">"black"</span></span>
+<span id="cb234-19"><a href="#cb234-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb234-20"><a href="#cb234-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb234-21"><a href="#cb234-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Megalitres"</span>,</span>
+<span id="cb234-22"><a href="#cb234-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Forecasts for quarterly beer production"</span></span>
+<span id="cb234-23"><a href="#cb234-23" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb234-24"><a href="#cb234-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"Forecast"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Plot variable not specified, automatically selected `.vars = Beer`</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-154-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="fitted-values-and-residuals" class="level2">
+<h2 class="anchored" data-anchor-id="fitted-values-and-residuals">5.3 Fitted values and residuals</h2>
+<ul>
+<li><p><span class="math inline">\(\hat{y}_{t|t-1}\)</span> is the forecast of <span class="math inline">\(y_t\)</span> based on observations <span class="math inline">\(y_1,...,y_{t-1}\)</span></p></li>
+<li><p>we call these “fitted values”</p></li>
+<li><p>sometimes drop the subscript: <span class="math inline">\(\hat{y_t} \equiv \hat{y}_{t|t-1}\)</span></p></li>
+<li><p>often not true forecasts since parameters are estimated on all data</p></li>
+</ul>
+<p>For example:</p>
+<ul>
+<li><p><span class="math inline">\(\hat{y}_t=\bar{t}\)</span> for average method</p></li>
+<li><p><span class="math inline">\(\hat{y}=y_{t-1}+(y_T-y_1)/(T-1)\)</span> for drift method</p></li>
+</ul>
+<p><strong>Residuals in forecasting</strong>: difference between observed value and its fitted value <span class="math inline">\(e_t=y_t-\hat{y}_{t|t-1}\)</span>.</p>
+<p>Assumptions:</p>
+<ul>
+<li><p><span class="math inline">\(\{e_t\}\)</span> uncorrelated. If they aren’t, then information left in residuals that should be used in computing forecasts.</p></li>
+<li><p><span class="math inline">\(\{e_t\}\)</span> have mean zero. If they don’t, then forecasts are biased.</p></li>
+</ul>
+<p>Useful properties (for distributions &amp; prediction intervals</p>
+<ul>
+<li><p><span class="math inline">\(\{e_t\}\)</span> have constant variance.</p></li>
+<li><p><span class="math inline">\(\{e_t\}\)</span> are normally distributed.</p></li>
+</ul>
+<p>To compute the fitted values and residuals:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb236"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb236-1"><a href="#cb236-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(beer_fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 180 x 6 [1Q]
+# Key:       .model [3]
+   .model Quarter  Beer .fitted .resid .innov
+   &lt;chr&gt;    &lt;qtr&gt; &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+ 1 Mean   1992 Q1   443    436.   6.55   6.55
+ 2 Mean   1992 Q2   410    436. -26.4  -26.4 
+ 3 Mean   1992 Q3   420    436. -16.4  -16.4 
+ 4 Mean   1992 Q4   532    436.  95.6   95.6 
+ 5 Mean   1993 Q1   433    436.  -3.45  -3.45
+ 6 Mean   1993 Q2   421    436. -15.4  -15.4 
+ 7 Mean   1993 Q3   410    436. -26.4  -26.4 
+ 8 Mean   1993 Q4   512    436.  75.6   75.6 
+ 9 Mean   1994 Q1   449    436.  12.6   12.6 
+10 Mean   1994 Q2   381    436. -55.4  -55.4 
+# ℹ 170 more rows</code></pre>
+</div>
+</div>
+</section>
+<section id="residual-diagnostics" class="level2">
+<h2 class="anchored" data-anchor-id="residual-diagnostics">5.4 Residual diagnostics</h2>
+<p>Facebook closing stock price</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb238"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb238-1"><a href="#cb238-1" aria-hidden="true" tabindex="-1"></a>fb_stock <span class="sc">|&gt;</span> </span>
+<span id="cb238-2"><a href="#cb238-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(Close)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-156-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb239"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb239-1"><a href="#cb239-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> fb_stock <span class="sc">|&gt;</span> </span>
+<span id="cb239-2"><a href="#cb239-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">NAIVE</span>(Close))</span>
+<span id="cb239-3"><a href="#cb239-3" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 1,258 x 7 [1]
+# Key:       Symbol, .model [1]
+   Symbol .model       trading_day Close .fitted .resid .innov
+   &lt;chr&gt;  &lt;chr&gt;              &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+ 1 FB     NAIVE(Close)           1  54.7    NA   NA     NA    
+ 2 FB     NAIVE(Close)           2  54.6    54.7 -0.150 -0.150
+ 3 FB     NAIVE(Close)           3  57.2    54.6  2.64   2.64 
+ 4 FB     NAIVE(Close)           4  57.9    57.2  0.720  0.720
+ 5 FB     NAIVE(Close)           5  58.2    57.9  0.310  0.310
+ 6 FB     NAIVE(Close)           6  57.2    58.2 -1.01  -1.01 
+ 7 FB     NAIVE(Close)           7  57.9    57.2  0.720  0.720
+ 8 FB     NAIVE(Close)           8  55.9    57.9 -2.03  -2.03 
+ 9 FB     NAIVE(Close)           9  57.7    55.9  1.83   1.83 
+10 FB     NAIVE(Close)          10  57.6    57.7 -0.140 -0.140
+# ℹ 1,248 more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb241"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb241-1"><a href="#cb241-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit) <span class="sc">|&gt;</span> </span>
+<span id="cb241-2"><a href="#cb241-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> trading_day)) <span class="sc">+</span></span>
+<span id="cb241-3"><a href="#cb241-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> Close, <span class="at">colour =</span> <span class="st">"Data"</span>)) <span class="sc">+</span></span>
+<span id="cb241-4"><a href="#cb241-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> .fitted, <span class="at">colour =</span> <span class="st">"Fitted"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-158-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb243"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb243-1"><a href="#cb243-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit) <span class="sc">|&gt;</span> </span>
+<span id="cb243-2"><a href="#cb243-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trading_day <span class="sc">&gt;</span> <span class="dv">1100</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb243-3"><a href="#cb243-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> trading_day)) <span class="sc">+</span></span>
+<span id="cb243-4"><a href="#cb243-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> Close, <span class="at">colour =</span> <span class="st">"Data"</span>)) <span class="sc">+</span></span>
+<span id="cb243-5"><a href="#cb243-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> .fitted, <span class="at">colour =</span> <span class="st">"Fitted"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-159-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb244"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb244-1"><a href="#cb244-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit) <span class="sc">|&gt;</span> </span>
+<span id="cb244-2"><a href="#cb244-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(.resid) <span class="sc">+</span></span>
+<span id="cb244-3"><a href="#cb244-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="st">"$US"</span>,</span>
+<span id="cb244-4"><a href="#cb244-4" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Residuals from naïve method"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-160-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb246"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb246-1"><a href="#cb246-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit) <span class="sc">|&gt;</span> </span>
+<span id="cb246-2"><a href="#cb246-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> .resid)) <span class="sc">+</span></span>
+<span id="cb246-3"><a href="#cb246-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">150</span>) <span class="sc">+</span></span>
+<span id="cb246-4"><a href="#cb246-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Histogram of residuals"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
+(`stat_bin()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-161-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb248"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb248-1"><a href="#cb248-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit) <span class="sc">|&gt;</span> </span>
+<span id="cb248-2"><a href="#cb248-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(.resid) <span class="sc">|&gt;</span> </span>
+<span id="cb248-3"><a href="#cb248-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb248-4"><a href="#cb248-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"ACF of residuals"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-162-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb249"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb249-1"><a href="#cb249-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gg_tsresiduals</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing missing values or values outside the scale range
+(`geom_point()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
+(`stat_bin()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-163-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>ACF of residuals</p>
+<ul>
+<li><p>We assume that the residuals are white noise (uncorrelated, mean zero, constant variance). If they aren’t, then there is information left in the residuals that should be used in computing forecasts.</p></li>
+<li><p>So a standard residual diagnostic is to check the ACF of the residuals of a forecasting method.</p></li>
+<li><p>We <em>expect</em> these to look like white noise.</p></li>
+</ul>
+<p><strong>Portmanteau tests</strong></p>
+<p><span class="math inline">\(r_k\)</span>=autocorrelation of residual at lag <span class="math inline">\(k\)</span></p>
+<p>Consider a whole set of <span class="math inline">\(r_k\)</span> values, and develop a test to see whether the set is significantly different from a zero test.</p>
+<p>Box-Pierce test :</p>
+<p><span class="math display">\[
+Q=T\sum_{k=1}^lr_k^2
+\]</span></p>
+<p>where <span class="math inline">\(l\)</span> is max lag being considered and <span class="math inline">\(T\)</span> is number of observations.</p>
+<ul>
+<li><p>if each <span class="math inline">\(r_k\)</span> close to 0, <span class="math inline">\(Q\)</span> will be small</p></li>
+<li><p>if some <span class="math inline">\(r_k\)</span> values large (positive or negative), <span class="math inline">\(Q\)</span> will be large</p></li>
+</ul>
+<p>Ljung-Box test :</p>
+<p><span class="math display">\[
+Q^*=T(T+2)\sum_{k=1}^l(T-k)^{-1}r_k^2
+\]</span></p>
+<p>where <span class="math inline">\(k\)</span> is max lag being considered and <span class="math inline">\(T\)</span> is number of observations.</p>
+<ul>
+<li><p>my preferences: <span class="math inline">\(l\)</span>=10 for non-seasonal data, <span class="math inline">\(l\)</span>=2m for seasonal data (where <span class="math inline">\(m\)</span> is seasonal period)</p></li>
+<li><p>better performance, especially in small samples</p></li>
+<li><p>if data were white noise, <span class="math inline">\(Q^*\)</span> has a <span class="math inline">\(\chi^2\)</span> distribution with <span class="math inline">\(l\)</span> degrees of freedom</p></li>
+<li><p>lag = <span class="math inline">\(l\)</span></p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb253"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb253-1"><a href="#cb253-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(fit) <span class="sc">|&gt;</span> </span>
+<span id="cb253-2"><a href="#cb253-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">features</span>(.resid, ljung_box, <span class="at">lag =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 4
+  Symbol .model       lb_stat lb_pvalue
+  &lt;chr&gt;  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;
+1 FB     NAIVE(Close)    12.1     0.276</code></pre>
+</div>
+</div>
+<p>If pval &lt; 0.05, we reject the white noise hypothesis.</p>
+<p>In our case, we accept the hypothesis that the residuals are not easily distinguished from white noise.</p>
+</section>
+<section id="distributional-forecasts-and-prediction-intervals" class="level2">
+<h2 class="anchored" data-anchor-id="distributional-forecasts-and-prediction-intervals">5.5 Distributional forecasts and prediction intervals</h2>
+<ul>
+<li><p>A forecast <span class="math inline">\(\hat{y}_{T+h|T}\)</span> is (usually) the mean of the conditional distribution <span class="math inline">\(y_{T+h}|y_1,...,y_T\)</span>.</p></li>
+<li><p>Most time series models produce normally distributed forecasts.</p></li>
+<li><p>The forecast distribution describes the probability of observing any future value.</p></li>
+</ul>
+<p>Assuming residuals are normal, uncorrelated, <span class="math inline">\(sd=\hat{\sigma}\)</span>:</p>
+<p><strong>Mean</strong>: <span class="math inline">\(y_{T+h|T} \sim N(\hat{y},(1+1/T)\hat{\sigma}^2)\)</span></p>
+<p><strong>Naïve</strong>: <span class="math inline">\(y_{T+h|T} \sim N(y_T,h\hat{\sigma}^2)\)</span></p>
+<p><strong>Seasonal naîve</strong>: <span class="math inline">\(y_{T+h|T} \sim N(y_{T+h-m(k+1)},(k+1)\hat{\sigma}^2)\)</span></p>
+<p><strong>Drift</strong>: <span class="math inline">\(y_{T+h|T} \sim N(y_T+\frac{h}{T-1}(y_T-y_1),h\frac{T+h}{T}\hat{\sigma}^2)\)</span></p>
+<p>where <span class="math inline">\(k\)</span> is the integer part of <span class="math inline">\((h-1)/m\)</span>.</p>
+<p>Note that when <span class="math inline">\(h=1\)</span> and <span class="math inline">\(T\)</span> is large, these all give the same approximate forecast variance: <span class="math inline">\(\hat{\sigma}^2\)</span>.</p>
+<ul>
+<li><p>A prediction interval gives a region within which we expect <span class="math inline">\(y_{T+h}\)</span> to lie with a specified probability</p></li>
+<li><p>Assuming forecast errors are normally distributed, then a 95% PI is <span class="math inline">\(\hat{y}_{T+h|T} \pm 1.96\hat{\sigma}_h\)</span> where <span class="math inline">\(\hat{\sigma}_h\)</span> is the st dev of the h-step distribution</p></li>
+<li><p>When h=1, <span class="math inline">\(\hat{\sigma}_h\)</span> can be estimated from the residuals</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb255"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb255-1"><a href="#cb255-1" aria-hidden="true" tabindex="-1"></a>aus_production <span class="sc">|&gt;</span> </span>
+<span id="cb255-2"><a href="#cb255-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb255-3"><a href="#cb255-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Seasonal_naive =</span> <span class="fu">SNAIVE</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb255-4"><a href="#cb255-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A fable: 20 x 4 [1Q]
+# Key:     .model [1]
+   .model         Quarter
+   &lt;chr&gt;            &lt;qtr&gt;
+ 1 Seasonal_naive 2005 Q3
+ 2 Seasonal_naive 2005 Q4
+ 3 Seasonal_naive 2006 Q1
+ 4 Seasonal_naive 2006 Q2
+ 5 Seasonal_naive 2006 Q3
+ 6 Seasonal_naive 2006 Q4
+ 7 Seasonal_naive 2007 Q1
+ 8 Seasonal_naive 2007 Q2
+ 9 Seasonal_naive 2007 Q3
+10 Seasonal_naive 2007 Q4
+11 Seasonal_naive 2008 Q1
+12 Seasonal_naive 2008 Q2
+13 Seasonal_naive 2008 Q3
+14 Seasonal_naive 2008 Q4
+15 Seasonal_naive 2009 Q1
+16 Seasonal_naive 2009 Q2
+17 Seasonal_naive 2009 Q3
+18 Seasonal_naive 2009 Q4
+19 Seasonal_naive 2010 Q1
+20 Seasonal_naive 2010 Q2
+# ℹ 2 more variables: Bricks &lt;dist&gt;, .mean &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb257"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb257-1"><a href="#cb257-1" aria-hidden="true" tabindex="-1"></a>aus_production <span class="sc">|&gt;</span> </span>
+<span id="cb257-2"><a href="#cb257-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb257-3"><a href="#cb257-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Seasonal_naive =</span> <span class="fu">SNAIVE</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb257-4"><a href="#cb257-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb257-5"><a href="#cb257-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hilo</span>(<span class="at">level =</span> <span class="dv">95</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 20 x 5 [1Q]
+# Key:       .model [1]
+   .model         Quarter
+   &lt;chr&gt;            &lt;qtr&gt;
+ 1 Seasonal_naive 2005 Q3
+ 2 Seasonal_naive 2005 Q4
+ 3 Seasonal_naive 2006 Q1
+ 4 Seasonal_naive 2006 Q2
+ 5 Seasonal_naive 2006 Q3
+ 6 Seasonal_naive 2006 Q4
+ 7 Seasonal_naive 2007 Q1
+ 8 Seasonal_naive 2007 Q2
+ 9 Seasonal_naive 2007 Q3
+10 Seasonal_naive 2007 Q4
+11 Seasonal_naive 2008 Q1
+12 Seasonal_naive 2008 Q2
+13 Seasonal_naive 2008 Q3
+14 Seasonal_naive 2008 Q4
+15 Seasonal_naive 2009 Q1
+16 Seasonal_naive 2009 Q2
+17 Seasonal_naive 2009 Q3
+18 Seasonal_naive 2009 Q4
+19 Seasonal_naive 2010 Q1
+20 Seasonal_naive 2010 Q2
+# ℹ 3 more variables: Bricks &lt;dist&gt;, .mean &lt;dbl&gt;, `95%` &lt;hilo&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb259"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb259-1"><a href="#cb259-1" aria-hidden="true" tabindex="-1"></a>aus_production <span class="sc">|&gt;</span> </span>
+<span id="cb259-2"><a href="#cb259-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb259-3"><a href="#cb259-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Seasonal_naive =</span> <span class="fu">SNAIVE</span>(Bricks)) <span class="sc">|&gt;</span> </span>
+<span id="cb259-4"><a href="#cb259-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"5 years"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb259-5"><a href="#cb259-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hilo</span>(<span class="at">level =</span> <span class="dv">95</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb259-6"><a href="#cb259-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">lower =</span> <span class="st">`</span><span class="at">95%</span><span class="st">`</span><span class="sc">$</span>lower,</span>
+<span id="cb259-7"><a href="#cb259-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">upper =</span> <span class="st">`</span><span class="at">95%</span><span class="st">`</span><span class="sc">$</span>upper)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 20 x 7 [1Q]
+# Key:       .model [1]
+   .model         Quarter
+   &lt;chr&gt;            &lt;qtr&gt;
+ 1 Seasonal_naive 2005 Q3
+ 2 Seasonal_naive 2005 Q4
+ 3 Seasonal_naive 2006 Q1
+ 4 Seasonal_naive 2006 Q2
+ 5 Seasonal_naive 2006 Q3
+ 6 Seasonal_naive 2006 Q4
+ 7 Seasonal_naive 2007 Q1
+ 8 Seasonal_naive 2007 Q2
+ 9 Seasonal_naive 2007 Q3
+10 Seasonal_naive 2007 Q4
+11 Seasonal_naive 2008 Q1
+12 Seasonal_naive 2008 Q2
+13 Seasonal_naive 2008 Q3
+14 Seasonal_naive 2008 Q4
+15 Seasonal_naive 2009 Q1
+16 Seasonal_naive 2009 Q2
+17 Seasonal_naive 2009 Q3
+18 Seasonal_naive 2009 Q4
+19 Seasonal_naive 2010 Q1
+20 Seasonal_naive 2010 Q2
+# ℹ 5 more variables: Bricks &lt;dist&gt;, .mean &lt;dbl&gt;, `95%` &lt;hilo&gt;, lower &lt;dbl&gt;,
+#   upper &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<ul>
+<li><p>Point forecasts are often useless without a measure of uncertainty (such as prediction intervals)</p></li>
+<li><p>Prediction intervals require a stochastic model (with random errors, etc.)</p></li>
+<li><p>For most models, prediction intervals get wider as the forecast horizon increases</p></li>
+<li><p>Use <code>level</code> argument to control coverage</p></li>
+<li><p>Check residual assumptions before believing them</p></li>
+<li><p>Prediction intervals are usually too narrow due to unaccounted uncertainty</p></li>
+</ul>
+</section>
+<section id="forecasting-using-transformations" class="level2">
+<h2 class="anchored" data-anchor-id="forecasting-using-transformations">5.6 Forecasting using transformations</h2>
+<p>If the data show different variations at different levels of the series, then a transformation can be useful.</p>
+<p>Denote original observations as <span class="math inline">\(y_1, ..., y_n\)</span> and transformed observations as <span class="math inline">\(w_1, ..., w_n\)</span>.</p>
+<p>Box-Cox transformations:</p>
+<p><span class="math display">\[
+w_t = \left\{\begin{array}{ll}
+        \log(y_t),      &amp; \quad \lambda = 0; \\
+        (sign(y_t)|y_t|^\lambda-1)/\lambda ,         &amp; \quad \lambda \ne 0.
+\end{array}\right.
+\]</span></p>
+<ul>
+<li>Natural logarithm, particularly useful because they are more interpretable: changes in a log value are relative (percent) changes on the original scale.</li>
+</ul>
+<p>We must reverse the transformation or back-transform to obtain forecasts on the original scale. The reverse Box-Cox transformations are given by:</p>
+<p><span class="math display">\[
+w_t = \left\{\begin{array}{ll}
+        \exp(w_t),      &amp; \quad \lambda = 0; \\
+        (sign(\lambda w_t+1)|\lambda w_t+1|^{1 /\lambda}, &amp; \quad \lambda \ne 0.
+\end{array}\right.
+\]</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb261"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb261-1"><a href="#cb261-1" aria-hidden="true" tabindex="-1"></a>eggs <span class="ot">&lt;-</span> prices <span class="sc">|&gt;</span> </span>
+<span id="cb261-2"><a href="#cb261-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(eggs)) <span class="sc">|&gt;</span> </span>
+<span id="cb261-3"><a href="#cb261-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eggs)</span>
+<span id="cb261-4"><a href="#cb261-4" aria-hidden="true" tabindex="-1"></a>eggs <span class="sc">|&gt;</span> </span>
+<span id="cb261-5"><a href="#cb261-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb261-6"><a href="#cb261-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Annual egg prices"</span>,</span>
+<span id="cb261-7"><a href="#cb261-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"$US (adjusted for inflation)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Plot variable not specified, automatically selected `.vars = eggs`</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-168-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Transformations used in the left of the formula will be automatically back-transformed. To model log-transformed egg prices, you could use:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb263"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb263-1"><a href="#cb263-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> eggs <span class="sc">|&gt;</span> </span>
+<span id="cb263-2"><a href="#cb263-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">RW</span>(<span class="fu">log</span>(eggs) <span class="sc">~</span> <span class="fu">drift</span>()))</span>
+<span id="cb263-3"><a href="#cb263-3" aria-hidden="true" tabindex="-1"></a>fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A mable: 1 x 1
+  `RW(log(eggs) ~ drift())`
+                    &lt;model&gt;
+1             &lt;RW w/ drift&gt;</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb265"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb265-1"><a href="#cb265-1" aria-hidden="true" tabindex="-1"></a>fc <span class="ot">&lt;-</span> fit <span class="sc">|&gt;</span> </span>
+<span id="cb265-2"><a href="#cb265-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="dv">50</span>)</span>
+<span id="cb265-3"><a href="#cb265-3" aria-hidden="true" tabindex="-1"></a>fc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A fable: 50 x 4 [1Y]
+# Key:     .model [1]
+   .model                   year             eggs .mean
+   &lt;chr&gt;                   &lt;dbl&gt;           &lt;dist&gt; &lt;dbl&gt;
+ 1 RW(log(eggs) ~ drift())  1994 t(N(4.1, 0.018))  61.8
+ 2 RW(log(eggs) ~ drift())  1995 t(N(4.1, 0.036))  61.4
+ 3 RW(log(eggs) ~ drift())  1996 t(N(4.1, 0.055))  61.0
+ 4 RW(log(eggs) ~ drift())  1997 t(N(4.1, 0.074))  60.6
+ 5 RW(log(eggs) ~ drift())  1998 t(N(4.1, 0.093))  60.2
+ 6 RW(log(eggs) ~ drift())  1999    t(N(4, 0.11))  59.8
+ 7 RW(log(eggs) ~ drift())  2000    t(N(4, 0.13))  59.4
+ 8 RW(log(eggs) ~ drift())  2001    t(N(4, 0.15))  59.0
+ 9 RW(log(eggs) ~ drift())  2002    t(N(4, 0.18))  58.6
+10 RW(log(eggs) ~ drift())  2003     t(N(4, 0.2))  58.3
+# ℹ 40 more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb267"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb267-1"><a href="#cb267-1" aria-hidden="true" tabindex="-1"></a>fc <span class="sc">|&gt;</span> </span>
+<span id="cb267-2"><a href="#cb267-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(eggs) <span class="sc">+</span></span>
+<span id="cb267-3"><a href="#cb267-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Annual egg prices"</span>,</span>
+<span id="cb267-4"><a href="#cb267-4" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"US$ (adjusted for inflation)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-171-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<ul>
+<li><p>Back-transformed point forecasts are medians</p></li>
+<li><p>Back-transformed PI have the correct coverage</p></li>
+</ul>
+<p><strong>Back-transformed means</strong></p>
+<p>Let <span class="math inline">\(X\)</span> have mean <span class="math inline">\(\mu\)</span> and variance <span class="math inline">\(\sigma^2\)</span></p>
+<p>Let <span class="math inline">\(f(x)\)</span> be back-transformed function, and <span class="math inline">\(Y=f(X)\)</span></p>
+<p>Taylor series expansion about <span class="math inline">\(\mu\)</span>:</p>
+<p><span class="math display">\[
+Y=f(X) \approx f(\mu) + (X-\mu)f'(\mu)+\frac{1}{2}(X-\mu)^2f''(\mu)
+\]</span></p>
+<p><span class="math display">\[
+E[Y]=E[f(X)] \approx f(\mu)+\frac{1}{2}\sigma^2f''(\mu)
+\]</span></p>
+<p><strong>Bias adjustment</strong></p>
+<p>Box-Cox back-transformation: <span class="math display">\[
+y_t = \left\{\begin{array}{ll}
+        \exp(w_t),      &amp; \quad \lambda = 0; \\
+        (\lambda w_t+1)^{1/\lambda} ,         &amp; \quad \lambda \ne 0.
+\end{array}\right.
+\]</span></p>
+<p><span class="math display">\[
+f(x) = \left\{\begin{array}{ll}
+        e^x,      &amp; \quad \lambda = 0; \\
+        (\lambda x+1)^{1/\lambda} ,         &amp; \quad \lambda \ne 0.
+\end{array}\right.
+\]</span></p>
+<p><span class="math display">\[
+f''(x) = \left\{\begin{array}{ll}
+        e^x,      &amp; \quad \lambda = 0; \\
+        (1- \lambda)(\lambda x+1)^{1/{\lambda-2}} ,         &amp; \quad \lambda \ne 0.
+\end{array}\right.
+\]</span></p>
+<p><span class="math display">\[
+E[Y] \approx \left\{\begin{array}{ll}
+        e^\mu[1+\frac{\sigma^2}{2}],      &amp; \quad \lambda = 0; \\
+        (\lambda\mu+1)^{1/\lambda}[1+\frac{\sigma^2(1- \lambda)}{2(\lambda\mu+1)^2}] ,         &amp; \quad \lambda \ne 0.
+\end{array}\right.
+\]</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb268"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb268-1"><a href="#cb268-1" aria-hidden="true" tabindex="-1"></a>fc <span class="sc">|&gt;</span> </span>
+<span id="cb268-2"><a href="#cb268-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(eggs, <span class="at">level =</span> <span class="dv">80</span>, <span class="at">point_forecast =</span> <span class="fu">lst</span>(mean, median)) <span class="sc">+</span></span>
+<span id="cb268-3"><a href="#cb268-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Annual egg prices"</span>,</span>
+<span id="cb268-4"><a href="#cb268-4" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"$US (adjusted for inflation)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-172-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="forecasting-with-decomposition" class="level2">
+<h2 class="anchored" data-anchor-id="forecasting-with-decomposition">5.7 Forecasting with decomposition</h2>
+<p><span class="math display">\[
+y=\hat{S_t}+\hat{A_t}
+\]</span></p>
+<ul>
+<li><p><span class="math inline">\(\hat{A_t}=\hat{T_t}+\hat{R_t}\)</span> is the seasonally adjusted component</p></li>
+<li><p><span class="math inline">\(\hat{S_t}\)</span> is the seasonal component</p></li>
+<li><p>Forecast <span class="math inline">\(\hat{S_t}\)</span> using SNAIVE</p></li>
+<li><p>Forecast <span class="math inline">\(\hat{A_t}\)</span> using non-seasonal time series method</p></li>
+<li><p>Combine forecasts of <span class="math inline">\(\hat{S_t}\)</span> and <span class="math inline">\(\hat{A_t}\)</span> to get forecasts of original data</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb269"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb269-1"><a href="#cb269-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="ot">&lt;-</span> us_employment <span class="sc">|&gt;</span> </span>
+<span id="cb269-2"><a href="#cb269-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">year</span>(Month) <span class="sc">&gt;=</span> <span class="dv">1990</span>, Title <span class="sc">==</span> <span class="st">"Retail Trade"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb269-3"><a href="#cb269-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>Series_ID)</span>
+<span id="cb269-4"><a href="#cb269-4" aria-hidden="true" tabindex="-1"></a>us_retail_employment</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 357 x 3 [1M]
+        Month Title        Employed
+        &lt;mth&gt; &lt;chr&gt;           &lt;dbl&gt;
+ 1 1990 janv. Retail Trade   13256.
+ 2 1990 févr. Retail Trade   12966.
+ 3  1990 mars Retail Trade   12938.
+ 4  1990 avr. Retail Trade   13012.
+ 5   1990 mai Retail Trade   13108.
+ 6  1990 juin Retail Trade   13183.
+ 7 1990 juil. Retail Trade   13170.
+ 8  1990 août Retail Trade   13160.
+ 9 1990 sept. Retail Trade   13113.
+10  1990 oct. Retail Trade   13185.
+# ℹ 347 more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb271"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb271-1"><a href="#cb271-1" aria-hidden="true" tabindex="-1"></a>dcmp <span class="ot">&lt;-</span> us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb271-2"><a href="#cb271-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">STL</span>(Employed)) <span class="sc">|&gt;</span> </span>
+<span id="cb271-3"><a href="#cb271-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb271-4"><a href="#cb271-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>.model)</span>
+<span id="cb271-5"><a href="#cb271-5" aria-hidden="true" tabindex="-1"></a>dcmp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 357 x 6 [1M]
+        Month Employed  trend season_year remainder season_adjust
+        &lt;mth&gt;    &lt;dbl&gt;  &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;
+ 1 1990 janv.   13256. 13288.      -33.0      0.836        13289.
+ 2 1990 févr.   12966. 13269.     -258.     -44.6          13224.
+ 3  1990 mars   12938. 13250.     -290.     -22.1          13228.
+ 4  1990 avr.   13012. 13231.     -220.       1.05         13232.
+ 5   1990 mai   13108. 13211.     -114.      11.3          13223.
+ 6  1990 juin   13183. 13192.      -24.3     15.5          13207.
+ 7 1990 juil.   13170. 13172.      -23.2     21.6          13193.
+ 8  1990 août   13160. 13151.       -9.52    17.8          13169.
+ 9 1990 sept.   13113. 13131.      -39.5     22.0          13153.
+10  1990 oct.   13185. 13110.       61.6     13.2          13124.
+# ℹ 347 more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb273"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb273-1"><a href="#cb273-1" aria-hidden="true" tabindex="-1"></a>dcmp <span class="sc">|&gt;</span> </span>
+<span id="cb273-2"><a href="#cb273-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">NAIVE</span>(season_adjust)) <span class="sc">|&gt;</span> </span>
+<span id="cb273-3"><a href="#cb273-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb273-4"><a href="#cb273-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(dcmp) <span class="sc">+</span></span>
+<span id="cb273-5"><a href="#cb273-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Naive forecasts of seasonally adjusted data"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-175-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb274"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb274-1"><a href="#cb274-1" aria-hidden="true" tabindex="-1"></a>us_retail_employment <span class="sc">|&gt;</span> </span>
+<span id="cb274-2"><a href="#cb274-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">stlf =</span> <span class="fu">decomposition_model</span>(</span>
+<span id="cb274-3"><a href="#cb274-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">STL</span>(Employed <span class="sc">~</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">7</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb274-4"><a href="#cb274-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">NAIVE</span>(season_adjust)</span>
+<span id="cb274-5"><a href="#cb274-5" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|&gt;</span> </span>
+<span id="cb274-6"><a href="#cb274-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb274-7"><a href="#cb274-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(us_retail_employment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-176-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><code>decomposition_model()</code> creates a decomposition model</p>
+<ul>
+<li><p>You must provide a method for forecasting the <code>season_adjust</code> series</p></li>
+<li><p>A seasonal naive method is used by default for the <code>seasonal</code> components</p></li>
+<li><p>The variances from both the seasonally adjusted and seasonal forecasts are combined</p></li>
+</ul>
+</section>
+<section id="evaluating-point-forecast-accuracy" class="level2">
+<h2 class="anchored" data-anchor-id="evaluating-point-forecast-accuracy">5.8 Evaluating point forecast accuracy</h2>
+<p><strong>Training and test sets</strong></p>
+<ul>
+<li><p>A model which fits the training data well will not necessarily forecast well</p></li>
+<li><p>A perfect fit can always be obtained by using a model with enough parameters</p></li>
+<li><p>Over-fitting a model to data is just as bad as failing to identify a systematic pattern in the data</p></li>
+<li><p>The test set must not be used for <em>any</em> aspect of model development or calculation of forecasts</p></li>
+<li><p>Forecast accuracy is based only on the test set</p></li>
+</ul>
+<p>Forecast “error”: the difference between an observed value and its forecast.</p>
+<p><span class="math display">\[
+e_{T+h}=y_{T+h}-\hat{y_{T+h|T}}
+\]</span></p>
+<p>where the training data is given by <span class="math inline">\(\{y_1,...,y_T\}\)</span>.</p>
+<ul>
+<li><p>Unlike residuals, forecast errors on the test set involve multi-step forecasts.</p></li>
+<li><p>There are <em>true</em> forecast errors as the test data is not used in computing <span class="math inline">\(\hat{y}_{T+h|T}\)</span>.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb275"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb275-1"><a href="#cb275-1" aria-hidden="true" tabindex="-1"></a>recent_production <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span></span>
+<span id="cb275-2"><a href="#cb275-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&gt;=</span> <span class="dv">1992</span>)</span>
+<span id="cb275-3"><a href="#cb275-3" aria-hidden="true" tabindex="-1"></a>beer_train <span class="ot">&lt;-</span> recent_production <span class="sc">|&gt;</span></span>
+<span id="cb275-4"><a href="#cb275-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&lt;=</span> <span class="dv">2007</span>)</span>
+<span id="cb275-5"><a href="#cb275-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb275-6"><a href="#cb275-6" aria-hidden="true" tabindex="-1"></a>beer_fit <span class="ot">&lt;-</span> beer_train <span class="sc">|&gt;</span></span>
+<span id="cb275-7"><a href="#cb275-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb275-8"><a href="#cb275-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean =</span> <span class="fu">MEAN</span>(Beer),</span>
+<span id="cb275-9"><a href="#cb275-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Naïve</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">NAIVE</span>(Beer),</span>
+<span id="cb275-10"><a href="#cb275-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Seasonal naïve</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">SNAIVE</span>(Beer),</span>
+<span id="cb275-11"><a href="#cb275-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Drift =</span> <span class="fu">RW</span>(Beer <span class="sc">~</span> <span class="fu">drift</span>())</span>
+<span id="cb275-12"><a href="#cb275-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb275-13"><a href="#cb275-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb275-14"><a href="#cb275-14" aria-hidden="true" tabindex="-1"></a>beer_fc <span class="ot">&lt;-</span> beer_fit <span class="sc">|&gt;</span></span>
+<span id="cb275-15"><a href="#cb275-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="dv">10</span>)</span>
+<span id="cb275-16"><a href="#cb275-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb275-17"><a href="#cb275-17" aria-hidden="true" tabindex="-1"></a>beer_fc <span class="sc">|&gt;</span></span>
+<span id="cb275-18"><a href="#cb275-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(</span>
+<span id="cb275-19"><a href="#cb275-19" aria-hidden="true" tabindex="-1"></a>    aus_production <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&gt;=</span> <span class="dv">1992</span>),</span>
+<span id="cb275-20"><a href="#cb275-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">level =</span> <span class="cn">NULL</span></span>
+<span id="cb275-21"><a href="#cb275-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb275-22"><a href="#cb275-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb275-23"><a href="#cb275-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Megalitres"</span>,</span>
+<span id="cb275-24"><a href="#cb275-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Forecasts for quarterly beer production"</span></span>
+<span id="cb275-25"><a href="#cb275-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb275-26"><a href="#cb275-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"Forecast"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-177-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Measures of forecast accuracy</strong></p>
+<p><span class="math inline">\(y_{T+h}\)</span>: (T+h)th observation, h =1, … H</p>
+<p><span class="math inline">\(\hat{y}_{T+h}\)</span>: its forecast based on data up to time T</p>
+<p><span class="math inline">\(e_{T+h}=y_{T+h}-\hat{y}_{T+h|T}\)</span></p>
+<p>ME = mean(<span class="math inline">\(e_{T+h})\)</span></p>
+<p>MAE = mean(<span class="math inline">\(|e_{T+h}|)\)</span></p>
+<p>MSE = mean(<span class="math inline">\(e^2_{T+h})\)</span></p>
+<p>RMSE = sqrt(mean(<span class="math inline">\(e^2_{T+h})\)</span>)</p>
+<p>MAPE = 100mean(<span class="math inline">\(|e_{T+h}|/|y_{T+h}|)\)</span></p>
+<ul>
+<li><p>MAE, MSE, RMSE are all scale dependent</p></li>
+<li><p>MAPE is scale independent but is only sensible if <span class="math inline">\(y_t &gt;&gt; 0\)</span> for all t, and y has a natural zero.</p></li>
+</ul>
+<p>Proposed by Hyndman and Koehler (IJF, 2006):</p>
+<ul>
+<li>For non-seasonal time series, scale errors using naïve forecasts</li>
+</ul>
+<p><span class="math display">\[
+q_j=\frac{e_j}{\frac{1}{T-1}\sum_{t=2}^T|y_t-y_{t-1}|}
+\]</span></p>
+<ul>
+<li>For seasonal time series, scale forecast errors using seasonal naïve forecasts</li>
+</ul>
+<p><span class="math display">\[
+q_j=\frac{e_j}{\frac{1}{T-m}\sum_{t=m+1}^T|y_t-y_{t-m}|}
+\]</span></p>
+<p>Mean Absolute Scaled Error: MASE = <span class="math inline">\(mean(|q_j|)\)</span></p>
+<p>Root Mean Squared Scaled Error: RMSSE = <span class="math inline">\(\sqrt{mean(q_j^2)}\)</span></p>
+<p>where</p>
+<p><span class="math display">\[
+q_j^2=\frac{e^2_j}{\frac{1}{T-m}\sum_{t=2}^T(y_t-y_{t-m})^2}
+\]</span></p>
+<p>and we set m=1 for non-seasonal data</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb276"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb276-1"><a href="#cb276-1" aria-hidden="true" tabindex="-1"></a>recent_production <span class="ot">&lt;-</span> aus_production <span class="sc">|&gt;</span></span>
+<span id="cb276-2"><a href="#cb276-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&gt;=</span> <span class="dv">1992</span>)</span>
+<span id="cb276-3"><a href="#cb276-3" aria-hidden="true" tabindex="-1"></a>beer_train <span class="ot">&lt;-</span> recent_production <span class="sc">|&gt;</span></span>
+<span id="cb276-4"><a href="#cb276-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&lt;=</span> <span class="dv">2007</span>)</span>
+<span id="cb276-5"><a href="#cb276-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb276-6"><a href="#cb276-6" aria-hidden="true" tabindex="-1"></a>beer_fit <span class="ot">&lt;-</span> beer_train <span class="sc">|&gt;</span></span>
+<span id="cb276-7"><a href="#cb276-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb276-8"><a href="#cb276-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean =</span> <span class="fu">MEAN</span>(Beer),</span>
+<span id="cb276-9"><a href="#cb276-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Naïve</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">NAIVE</span>(Beer),</span>
+<span id="cb276-10"><a href="#cb276-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">Seasonal naïve</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">SNAIVE</span>(Beer),</span>
+<span id="cb276-11"><a href="#cb276-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Drift =</span> <span class="fu">RW</span>(Beer <span class="sc">~</span> <span class="fu">drift</span>())</span>
+<span id="cb276-12"><a href="#cb276-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb276-13"><a href="#cb276-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb276-14"><a href="#cb276-14" aria-hidden="true" tabindex="-1"></a>beer_fc <span class="ot">&lt;-</span> beer_fit <span class="sc">|&gt;</span></span>
+<span id="cb276-15"><a href="#cb276-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">h =</span> <span class="dv">10</span>)</span>
+<span id="cb276-16"><a href="#cb276-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb276-17"><a href="#cb276-17" aria-hidden="true" tabindex="-1"></a>beer_fc <span class="sc">|&gt;</span></span>
+<span id="cb276-18"><a href="#cb276-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(</span>
+<span id="cb276-19"><a href="#cb276-19" aria-hidden="true" tabindex="-1"></a>    aus_production <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">year</span>(Quarter) <span class="sc">&gt;=</span> <span class="dv">1992</span>),</span>
+<span id="cb276-20"><a href="#cb276-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">level =</span> <span class="cn">NULL</span></span>
+<span id="cb276-21"><a href="#cb276-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb276-22"><a href="#cb276-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb276-23"><a href="#cb276-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Megalitres"</span>,</span>
+<span id="cb276-24"><a href="#cb276-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Forecasts for quarterly beer production"</span></span>
+<span id="cb276-25"><a href="#cb276-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb276-26"><a href="#cb276-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">title =</span> <span class="st">"Forecast"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fpp3_files/figure-html/unnamed-chunk-178-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Measures of forecast accuracy</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb277"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb277-1"><a href="#cb277-1" aria-hidden="true" tabindex="-1"></a><span class="fu">accuracy</span>(beer_fit) <span class="sc">|&gt;</span> </span>
+<span id="cb277-2"><a href="#cb277-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(.model) <span class="sc">|&gt;</span> </span>
+<span id="cb277-3"><a href="#cb277-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, .type, RMSE, MAE, MAPE, MASE, RMSSE)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 7
+  .model         .type     RMSE   MAE  MAPE  MASE RMSSE
+  &lt;chr&gt;          &lt;chr&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+1 Drift          Training  65.3  54.8 12.2   3.83  3.89
+2 Mean           Training  43.6  35.2  7.89  2.46  2.60
+3 Naïve          Training  65.3  54.7 12.2   3.83  3.89
+4 Seasonal naïve Training  16.8  14.3  3.31  1     1   </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb279"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb279-1"><a href="#cb279-1" aria-hidden="true" tabindex="-1"></a><span class="fu">accuracy</span>(beer_fc, recent_production) <span class="sc">|&gt;</span> </span>
+<span id="cb279-2"><a href="#cb279-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(.model) <span class="sc">|&gt;</span> </span>
+<span id="cb279-3"><a href="#cb279-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, .type, RMSE, MAE, MAPE, MASE, RMSSE)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 7
+  .model         .type  RMSE   MAE  MAPE  MASE RMSSE
+  &lt;chr&gt;          &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+1 Drift          Test   64.9  58.9 14.6  4.12  3.87 
+2 Mean           Test   38.4  34.8  8.28 2.44  2.29 
+3 Naïve          Test   62.7  57.4 14.2  4.01  3.74 
+4 Seasonal naïve Test   14.3  13.4  3.17 0.937 0.853</code></pre>
+</div>
+</div>
 </section>
 </section>
 

@@ -2236,3 +2236,384 @@ If pval \< 0.05, we reject the white noise hypothesis.
 In our case, we accept the hypothesis that the residuals are not easily distinguished from white noise.
 
 ## 5.5 Distributional forecasts and prediction intervals
+
+-   A forecast $\hat{y}_{T+h|T}$ is (usually) the mean of the conditional distribution $y_{T+h}|y_1,...,y_T$.
+
+-   Most time series models produce normally distributed forecasts.
+
+-   The forecast distribution describes the probability of observing any future value.
+
+Assuming residuals are normal, uncorrelated, $sd=\hat{\sigma}$:
+
+**Mean**: $y_{T+h|T} \sim N(\hat{y},(1+1/T)\hat{\sigma}^2)$
+
+**Naïve**: $y_{T+h|T} \sim N(y_T,h\hat{\sigma}^2)$
+
+**Seasonal naîve**: $y_{T+h|T} \sim N(y_{T+h-m(k+1)},(k+1)\hat{\sigma}^2)$
+
+**Drift**: $y_{T+h|T} \sim N(y_T+\frac{h}{T-1}(y_T-y_1),h\frac{T+h}{T}\hat{\sigma}^2)$
+
+where $k$ is the integer part of $(h-1)/m$.
+
+Note that when $h=1$ and $T$ is large, these all give the same approximate forecast variance: $\hat{\sigma}^2$.
+
+-   A prediction interval gives a region within which we expect $y_{T+h}$ to lie with a specified probability
+
+-   Assuming forecast errors are normally distributed, then a 95% PI is $\hat{y}_{T+h|T} \pm 1.96\hat{\sigma}_h$ where $\hat{\sigma}_h$ is the st dev of the h-step distribution
+
+-   When h=1, $\hat{\sigma}_h$ can be estimated from the residuals
+
+```{r}
+aus_production |> 
+  filter(!is.na(Bricks)) |> 
+  model(Seasonal_naive = SNAIVE(Bricks)) |> 
+  forecast(h = "5 years")
+```
+
+```{r}
+aus_production |> 
+  filter(!is.na(Bricks)) |> 
+  model(Seasonal_naive = SNAIVE(Bricks)) |> 
+  forecast(h = "5 years") |> 
+  hilo(level = 95)
+```
+
+```{r}
+aus_production |> 
+  filter(!is.na(Bricks)) |> 
+  model(Seasonal_naive = SNAIVE(Bricks)) |> 
+  forecast(h = "5 years") |> 
+  hilo(level = 95) |> 
+  mutate(lower = `95%`$lower,
+         upper = `95%`$upper)
+```
+
+-   Point forecasts are often useless without a measure of uncertainty (such as prediction intervals)
+
+-   Prediction intervals require a stochastic model (with random errors, etc.)
+
+-   For most models, prediction intervals get wider as the forecast horizon increases
+
+-   Use `level` argument to control coverage
+
+-   Check residual assumptions before believing them
+
+-   Prediction intervals are usually too narrow due to unaccounted uncertainty
+
+## 5.6 Forecasting using transformations
+
+If the data show different variations at different levels of the series, then a transformation can be useful.
+
+Denote original observations as $y_1, ..., y_n$ and transformed observations as $w_1, ..., w_n$.
+
+Box-Cox transformations:
+
+$$
+w_t = \left\{\begin{array}{ll}
+        \log(y_t),      & \quad \lambda = 0; \\
+        (sign(y_t)|y_t|^\lambda-1)/\lambda ,         & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+-   Natural logarithm, particularly useful because they are more interpretable: changes in a log value are relative (percent) changes on the original scale.
+
+We must reverse the transformation or back-transform to obtain forecasts on the original scale. The reverse Box-Cox transformations are given by:
+
+$$
+w_t = \left\{\begin{array}{ll}
+        \exp(w_t),      & \quad \lambda = 0; \\
+        (sign(\lambda w_t+1)|\lambda w_t+1|^{1 /\lambda}, & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+```{r}
+eggs <- prices |> 
+  filter(!is.na(eggs)) |> 
+  select(eggs)
+eggs |> 
+  autoplot() +
+  labs(title = "Annual egg prices",
+       y = "$US (adjusted for inflation)")
+```
+
+Transformations used in the left of the formula will be automatically back-transformed. To model log-transformed egg prices, you could use:
+
+```{r}
+fit <- eggs |> 
+  model(RW(log(eggs) ~ drift()))
+fit
+```
+
+```{r}
+fc <- fit |> 
+  forecast(h = 50)
+fc
+```
+
+```{r}
+fc |> 
+  autoplot(eggs) +
+  labs(title = "Annual egg prices",
+       y = "US$ (adjusted for inflation)")
+```
+
+-   Back-transformed point forecasts are medians
+
+-   Back-transformed PI have the correct coverage
+
+**Back-transformed means**
+
+Let $X$ have mean $\mu$ and variance $\sigma^2$
+
+Let $f(x)$ be back-transformed function, and $Y=f(X)$
+
+Taylor series expansion about $\mu$:
+
+$$
+Y=f(X) \approx f(\mu) + (X-\mu)f'(\mu)+\frac{1}{2}(X-\mu)^2f''(\mu)
+$$
+
+$$
+E[Y]=E[f(X)] \approx f(\mu)+\frac{1}{2}\sigma^2f''(\mu)
+$$
+
+**Bias adjustment**
+
+Box-Cox back-transformation:
+$$
+y_t = \left\{\begin{array}{ll}
+        \exp(w_t),      & \quad \lambda = 0; \\
+        (\lambda w_t+1)^{1/\lambda} ,         & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+$$
+f(x) = \left\{\begin{array}{ll}
+        e^x,      & \quad \lambda = 0; \\
+        (\lambda x+1)^{1/\lambda} ,         & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+$$
+f''(x) = \left\{\begin{array}{ll}
+        e^x,      & \quad \lambda = 0; \\
+        (1- \lambda)(\lambda x+1)^{1/{\lambda-2}} ,         & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+$$
+E[Y] \approx \left\{\begin{array}{ll}
+        e^\mu[1+\frac{\sigma^2}{2}],      & \quad \lambda = 0; \\
+        (\lambda\mu+1)^{1/\lambda}[1+\frac{\sigma^2(1- \lambda)}{2(\lambda\mu+1)^2}] ,         & \quad \lambda \ne 0.
+\end{array}\right.
+$$
+
+```{r}
+fc |> 
+  autoplot(eggs, level = 80, point_forecast = lst(mean, median)) +
+  labs(title = "Annual egg prices",
+       y = "$US (adjusted for inflation)")
+```
+
+## 5.7 Forecasting with decomposition
+
+$$
+y=\hat{S_t}+\hat{A_t}
+$$
+
+-   $\hat{A_t}=\hat{T_t}+\hat{R_t}$ is the seasonally adjusted component
+
+-   $\hat{S_t}$ is the seasonal component
+
+-   Forecast $\hat{S_t}$ using SNAIVE
+
+-   Forecast $\hat{A_t}$ using non-seasonal time series method
+
+-   Combine forecasts of $\hat{S_t}$ and $\hat{A_t}$ to get forecasts of original data
+
+```{r}
+us_retail_employment <- us_employment |> 
+  filter(year(Month) >= 1990, Title == "Retail Trade") |> 
+  select(-Series_ID)
+us_retail_employment
+```
+
+```{r}
+dcmp <- us_retail_employment |> 
+  model(STL(Employed)) |> 
+  components() |> 
+  select(-.model)
+dcmp
+```
+
+```{r}
+dcmp |> 
+  model(NAIVE(season_adjust)) |> 
+  forecast() |> 
+  autoplot(dcmp) +
+  labs(title = "Naive forecasts of seasonally adjusted data")
+```
+
+```{r}
+us_retail_employment |> 
+  model(stlf = decomposition_model(
+    STL(Employed ~ trend(window = 7), robust = TRUE),
+    NAIVE(season_adjust)
+  )) |> 
+  forecast() |> 
+  autoplot(us_retail_employment)
+```
+
+`decomposition_model()` creates a decomposition model
+
+-   You must provide a method for forecasting the `season_adjust` series
+
+-   A seasonal naive method is used by default for the `seasonal` components
+
+-   The variances from both the seasonally adjusted and seasonal forecasts are combined
+
+## 5.8 Evaluating point forecast accuracy
+
+**Training and test sets**
+
+-   A model which fits the training data well will not necessarily forecast well
+
+-   A perfect fit can always be obtained by using a model with enough parameters
+
+-   Over-fitting a model to data is just as bad as failing to identify a systematic pattern in the data
+
+-   The test set must not be used for *any* aspect of model development or calculation of forecasts
+
+-   Forecast accuracy is based only on the test set
+
+Forecast "error": the difference between an observed value and its forecast.
+
+$$
+e_{T+h}=y_{T+h}-\hat{y_{T+h|T}}
+$$
+
+where the training data is given by $\{y_1,...,y_T\}$.
+
+-   Unlike residuals, forecast errors on the test set involve multi-step forecasts.
+
+-   There are *true* forecast errors as the test data is not used in computing $\hat{y}_{T+h|T}$.
+
+```{r}
+recent_production <- aus_production |>
+  filter(year(Quarter) >= 1992)
+beer_train <- recent_production |>
+  filter(year(Quarter) <= 2007)
+
+beer_fit <- beer_train |>
+  model(
+    Mean = MEAN(Beer),
+    `Naïve` = NAIVE(Beer),
+    `Seasonal naïve` = SNAIVE(Beer),
+    Drift = RW(Beer ~ drift())
+  )
+
+beer_fc <- beer_fit |>
+  forecast(h = 10)
+
+beer_fc |>
+  autoplot(
+    aus_production |> filter(year(Quarter) >= 1992),
+    level = NULL
+  ) +
+  labs(
+    y = "Megalitres",
+    title = "Forecasts for quarterly beer production"
+  ) +
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+**Measures of forecast accuracy**
+
+$y_{T+h}$: (T+h)th observation, h =1, ... H
+
+$\hat{y}_{T+h}$: its forecast based on data up to time T
+
+$e_{T+h}=y_{T+h}-\hat{y}_{T+h|T}$
+
+ME = mean($e_{T+h})$
+
+MAE = mean($|e_{T+h}|)$
+
+MSE = mean($e^2_{T+h})$
+
+RMSE = sqrt(mean($e^2_{T+h})$)
+
+MAPE = 100mean($|e_{T+h}|/|y_{T+h}|)$
+
+-   MAE, MSE, RMSE are all scale dependent
+
+-   MAPE is scale independent but is only sensible if $y_t >> 0$ for all t, and y has a natural zero.
+
+Proposed by Hyndman and Koehler (IJF, 2006):
+
+-   For non-seasonal time series, scale errors using naïve forecasts
+
+$$
+q_j=\frac{e_j}{\frac{1}{T-1}\sum_{t=2}^T|y_t-y_{t-1}|}
+$$
+
+-   For seasonal time series, scale forecast errors using seasonal naïve forecasts
+
+$$
+q_j=\frac{e_j}{\frac{1}{T-m}\sum_{t=m+1}^T|y_t-y_{t-m}|}
+$$
+
+Mean Absolute Scaled Error: MASE = $mean(|q_j|)$
+
+Root Mean Squared Scaled Error: RMSSE = $\sqrt{mean(q_j^2)}$
+
+where
+
+$$
+q_j^2=\frac{e^2_j}{\frac{1}{T-m}\sum_{t=2}^T(y_t-y_{t-m})^2}
+$$
+
+and we set m=1 for non-seasonal data
+
+```{r}
+recent_production <- aus_production |>
+  filter(year(Quarter) >= 1992)
+beer_train <- recent_production |>
+  filter(year(Quarter) <= 2007)
+
+beer_fit <- beer_train |>
+  model(
+    Mean = MEAN(Beer),
+    `Naïve` = NAIVE(Beer),
+    `Seasonal naïve` = SNAIVE(Beer),
+    Drift = RW(Beer ~ drift())
+  )
+
+beer_fc <- beer_fit |>
+  forecast(h = 10)
+
+beer_fc |>
+  autoplot(
+    aus_production |> filter(year(Quarter) >= 1992),
+    level = NULL
+  ) +
+  labs(
+    y = "Megalitres",
+    title = "Forecasts for quarterly beer production"
+  ) +
+  guides(colour = guide_legend(title = "Forecast"))
+```
+
+**Measures of forecast accuracy**
+
+```{r}
+accuracy(beer_fit) |> 
+  arrange(.model) |> 
+  select(.model, .type, RMSE, MAE, MAPE, MASE, RMSSE)
+```
+
+```{r}
+accuracy(beer_fc, recent_production) |> 
+  arrange(.model) |> 
+  select(.model, .type, RMSE, MAE, MAPE, MASE, RMSSE)
+```
